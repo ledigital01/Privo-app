@@ -1,7 +1,24 @@
 import React from 'react'
 import { Shield, Clock, Plus, Zap, AlertCircle, ChevronRight, Search } from 'lucide-react'
 
-// Dummy data for visual reference
+// Internal Icon components (Defined first to avoid hoisting issues)
+const FolderOpen = ({ size, className }) => (
+  <span className={className}>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.94a2 2 0 0 1 1.76.9l1.14 2.22A2 2 0 0 0 12.6 7H19a2 2 0 0 1 2 2v1"/>
+      <path d="M6 14H4"/>
+    </svg>
+  </span>
+)
+
+const Bell = ({ size }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+    <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+  </svg>
+)
+
+// Data constants
 const SUMMARY = [
   { label: 'Total', value: '24', icon: <FolderOpen size={20} />, color: 'bg-[#dae2ff] text-[#003d9b]' },
   { label: 'Expirant', value: '3', icon: <Clock size={20} />, color: 'bg-[#fee2e2] text-[#ba1a1a]' },
@@ -100,10 +117,5 @@ const Dashboard = ({ onAddClick }) => {
     </div>
   )
 }
-
-// Internal FolderOpen import workaround
-const FolderOpen = ({ size, className }) => <span className={className}><svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.94a2 2 0 0 1 1.76.9l1.14 2.22A2 2 0 0 0 12.6 7H19a2 2 0 0 1 2 2v1"/><path d="M6 14H4"/></svg></span>
-
-const Bell = ({ size }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
 
 export default Dashboard
