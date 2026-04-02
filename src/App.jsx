@@ -291,184 +291,209 @@ function EditDocumentModal({ isOpen, onClose, doc }) {
   )
 }
 
+/* --- UTILS: Mapping & Normalisation --- */
+const CATEGORY_MAP = {
+  'passport': 'Identité', 'id_card': 'Identité', 'license': 'Identité',
+  'invoice': 'Finance', 'receipt': 'Finance', 'bank_statement': 'Finance',
+  'contract': 'Contrat', 'employment': 'Contrat',
+  'diploma': 'Santé', 'medical': 'Santé' // Adaptable selon tes besoins
+}
+
+const normalizeDate = (dateStr) => {
+  if (!dateStr) return ''
+  // Transforme "DD/MM/YYYY" en "YYYY-MM-DD" pour l'input date
+  const parts = dateStr.match(/(\d{2})[/-](\d{2})[/-](\d{4})/)
+  if (parts) return `${parts[3]}-${parts[2]}-${parts[1]}`
+  return dateStr // Retourne brut si déjà OK ou non reconnu
+}
+
 /* ================================================================
-   MODAL — IA SCAN (Version Premium : Camera + Aperçu + Fix)
+   MODAL — IA SCAN SUPRÊME (Version 2.0 : Robuste & Premium)
    ================================================================ */
 function IAScanModal({ isOpen, onClose }) {
   const { authUser, addDocument } = useApp()
-  const [step, setStep] = useState('upload') // 'upload' | 'processing' | 'result' | 'done'
+  const [step, setStep] = useState('upload') // 'upload' | 'processing' | 'review' | 'done'
   const [file, setFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
-  const [aiData, setAiData] = useState(null)
+  const [filePath, setFilePath] = useState(null) // Stocke le chemin unique
+  const [formData, setFormData] = useState({ title: '', category: 'Autre', expiresAt: '', issuer: '', tags: [] })
   const [isSaving, setIsSaving] = useState(false)
+  const [tempTag, setTempTag] = useState('')
 
   const reset = () => {
-    setStep('upload')
-    setFile(null)
-    setPreviewUrl(null)
-    setAiData(null)
-    setIsSaving(false)
+    setStep('upload'); setFile(null); setPreviewUrl(null); setFilePath(null); setIsSaving(false)
+    setFormData({ title: '', category: 'Autre', expiresAt: '', issuer: '', tags: [] })
   }
 
-  const handleClose = () => {
-    reset()
-    onClose()
-  }
+  const handleClose = () => { if (step !== 'processing' && step !== 'review') { reset(); onClose(); } }
 
   const handleFileChange = async (e) => {
     const selectedFile = e.target.files[0]
     if (!selectedFile) return
-
-    // Créer un aperçu visuel immédiat
-    const url = URL.createObjectURL(selectedFile)
-    setPreviewUrl(url)
+    setPreviewUrl(URL.createObjectURL(selectedFile))
     setFile(selectedFile)
     setStep('processing')
 
     try {
-      // 1. Upload vers Supabase (C'est obligatoire pour que l'IA y accède)
-      const fileExt = selectedFile.name.split('.').pop()
-      const fileName = `ai_scan_${Date.now()}.${fileExt}`
-      const filePath = `${authUser.id}/${fileName}`
+      // UNIQUE UPLOAD START
+      const path = `${authUser.id}/ai_scan_${Date.now()}.${selectedFile.name.split('.').pop()}`
+      setFilePath(path)
+      await supabase.storage.from('documents').upload(path, selectedFile)
 
-      const { error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(filePath, selectedFile)
+      const { data } = await supabase.functions.invoke('process_document', { body: { filePath: path, userId: authUser.id } })
 
-      if (uploadError) throw new Error("Échec de l'upload temporaire.")
-
-      // 2. Appel de la fonction IA
-      const { data, error: funcError } = await supabase.functions.invoke('process_document', {
-        body: { filePath: filePath, userId: authUser.id }
-      })
-
-      if (funcError || !data) {
-        // En cas d'erreur IA, on essaie au moins de récupérer le doc
-        throw new Error("L'IA n'a pas pu analyser ce document. Essayez l'ajout manuel.")
+      if (data && data.result) {
+        const res = data.result
+        setFormData({
+          title: res.extracted_data?.Nom || res.detected_type || '',
+          category: CATEGORY_MAP[res.detected_type?.toLowerCase()] || 'Autre',
+          expiresAt: normalizeDate(res.extracted_data?.Expiration),
+          issuer: res.extracted_data?.Emetteur || '',
+          tags: res.suggested_tags || []
+        })
+        setStep('review')
       }
-
-      setAiData({ ...data.result, filePath })
-      setStep('result')
-
     } catch (error) {
-      alert("Erreur IA : " + error.message)
-      setStep('upload')
-      setPreviewUrl(null)
+      console.error("Erreur IA:", error)
+      setStep('review') // On passe en manuel si l'IA échoue
     }
   }
 
-  const handleConfirm = async () => {
+  const handleFinalSave = async () => {
     setIsSaving(true)
-    try {
-      await addDocument({
-        title: aiData.extracted_data?.Nom || aiData.detected_type || "Document IA",
-        type: aiData.detected_type || "Autre",
-        expiresAt: aiData.extracted_data?.Expiration || null,
-        iconName: aiData.detected_type === 'Identité' ? 'user' : 'file',
-      }, file)
-
-      setStep('done')
-      setTimeout(handleClose, 2000)
-    } catch (e) {
-      alert("Erreur lors de l'enregistrement.")
-    } finally {
-      setIsSaving(false)
-    }
+    // On passe le filePath déjà existant au lieu du fichier brut pour éviter le double upload
+    await addDocument({ ...formData, filePath }, null)
+    setStep('done')
+    if (window.navigator.vibrate) window.navigator.vibrate(50) // Vibration succès sur mobile
+    setTimeout(() => { reset(); onClose(); }, 2000)
   }
 
   if (!isOpen) return null
 
   return (
     <div className="modal-overlay" onClick={handleClose}>
-      <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: '90vh' }}>
+      <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: '92vh' }}>
         <div className="modal-handle" />
+
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Zap size={20} color="var(--c-primary)" />
-            <h2 className="title-md">{step === 'processing' ? 'Scan en cours...' : 'Scan Intelligent'}</h2>
+            <Zap size={20} color="var(--c-primary)" className={step === 'processing' ? 'pulse' : ''} />
+            <h2 className="title-md">
+              {step === 'upload' && 'Nouveau Document'}
+              {step === 'processing' && 'Analyse Intelligence...'}
+              {step === 'review' && 'Vérification IA'}
+              {step === 'done' && 'Coffre Sécurisé !'}
+            </h2>
           </div>
-          <button className="modal-close-btn" onClick={handleClose}><X size={18} /></button>
+          {/* On ne permet pas de fermer pendant qu'on travaille dur */}
+          {step !== 'processing' && <button className="modal-close-btn" onClick={handleClose}><X size={18} /></button>}
         </div>
 
-        <div className="modal-body no-scrollbar" style={{ overflowY: 'auto' }}>
+        <div className="modal-body no-scrollbar" style={{ overflowY: 'auto', paddingBottom: 30 }}>
 
-          {/* ÉTAPE : CHOIX MÉTHODE (CAMERA vs DOSSIER) */}
           {step === 'upload' && (
-            <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <div className="icon-wrap lg primary" style={{ margin: '0 auto 20px' }}><Camera size={32} /></div>
-              <p className="title-sm">Sécurisez un nouveau document</p>
-              <p className="body-sm" style={{ marginBottom: 30, marginTop: 8 }}>Utilisez votre appareil photo pour un classement automatique.</p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {/* BOUTON PHOTOGRAPHIER (Camera direct sur mobile) */}
-                <label className="btn-primary" style={{ cursor: 'pointer', display: 'flex', gap: 10, justifyContent: 'center' }}>
-                  <Camera size={20} /> Prendre une photo
+            <div style={{ padding: '10px 0' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <label className="action-row" style={{ cursor: 'pointer', border: '1.5px solid var(--c-primary-soft)', background: 'var(--c-primary-soft)' }}>
+                  <div className="icon-wrap md primary"><Camera size={24} /></div>
+                  <div style={{ flex: 1 }}>
+                    <div className="action-text">Réaliser un scan photo</div>
+                    <div className="action-desc">Idéal pour les cartes et documents papiers.</div>
+                  </div>
                   <input type="file" hidden accept="image/*" capture="environment" onChange={handleFileChange} />
                 </label>
-
-                {/* BOUTON CHOISIR DOSSIER */}
-                <label className="btn-secondary" style={{ cursor: 'pointer', display: 'flex', gap: 10, justifyContent: 'center' }}>
-                  <UploadCloud size={20} /> Importer un fichier
+                <label className="action-row" style={{ cursor: 'pointer' }}>
+                  <div className="icon-wrap md neutral"><UploadCloud size={24} /></div>
+                  <div style={{ flex: 1 }}>
+                    <div className="action-text">Sélectionner un fichier</div>
+                    <div className="action-desc">Supporte les formats PDF et Images.</div>
+                  </div>
                   <input type="file" hidden accept="image/*,application/pdf" onChange={handleFileChange} />
                 </label>
               </div>
             </div>
           )}
 
-          {/* ÉTAPE : SCANNING AVEC APERÇU RÉEL */}
           {step === 'processing' && (
             <div style={{ textAlign: 'center', padding: '10px 0' }}>
-              <div style={{ position: 'relative', width: '100%', height: 260, background: '#000', borderRadius: 'var(--r-xl)', overflow: 'hidden', marginBottom: 20 }}>
-                {previewUrl && <img src={previewUrl} alt="Scan preview" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.7 }} />}
-                <div className="scan-line-active" /> {/* Classe CSS à ajouter dans index.css */}
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Zap size={48} color="white" className="pulse-fast" />
-                </div>
+              <div style={{ position: 'relative', width: '100%', height: 280, background: '#000', borderRadius: 'var(--r-xl)', overflow: 'hidden', marginBottom: 20 }}>
+                {previewUrl && <img src={previewUrl} style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: 0.6 }} />}
+                <div className="scan-line-active" />
               </div>
-              <p className="title-sm">L'IA déchiffre le document...</p>
-              <p className="body-sm" style={{ marginTop: 8 }}>Extraction sécurisée des données confidentielles.</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <p className="title-sm">L'IA de Privo décrypte votre document</p>
+                <div className="progress-bar-container" style={{ width: '60%', margin: '0 auto', height: 4, background: 'var(--c-surface-2)', borderRadius: 2 }}>
+                  <div className="progress-bar-fill" /> {/* Animation CSS progress */}
+                </div>
+                <p className="body-sm" style={{ opacity: 0.6 }}>Analyse OCR et classification en cours...</p>
+              </div>
             </div>
           )}
 
-          {/* ÉTAPE : RÉSULTAT IA */}
-          {step === 'result' && aiData && (
-            <>
-              <div style={{ width: '100%', height: 140, borderRadius: 'var(--r-lg)', overflow: 'hidden', marginBottom: 16, border: '2px solid var(--c-border)' }}>
-                {previewUrl && <img src={previewUrl} alt="Aperçu" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-              </div>
-              <div className="label-xs" style={{ marginBottom: 12 }}>Analyse de l'agent IA Privo</div>
-              <div className="space-y-3">
-                <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px' }}>
-                  <FileText size={18} color="var(--c-primary)" />
-                  <div style={{ flex: 1 }}>
-                    <div className="label-xs">Catégorie détectée</div>
-                    <div className="title-sm">{aiData.detected_type}</div>
-                  </div>
-                  <div className="badge success">{Math.round(aiData.confidence_score * 100)}%</div>
+          {step === 'review' && (
+            <div className="space-y-4">
+              <div style={{ display: 'flex', gap: 14, alignItems: 'center', background: 'var(--c-primary-soft)', padding: 12, borderRadius: 'var(--r-md)', marginBottom: 10 }}>
+                <div style={{ width: 60, height: 60, borderRadius: 'var(--r-sm)', overflow: 'hidden', flexShrink: 0 }}>
+                  {previewUrl && <img src={previewUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
                 </div>
-                <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px' }}>
-                  <Calendar size={18} color="var(--c-warn)" />
-                  <div>
-                    <div className="label-xs">Expiration calculée</div>
-                    <div className="title-sm">{aiData.extracted_data?.Expiration || 'À saisir manuellement'}</div>
-                  </div>
+                <div>
+                  <div className="label-xs" style={{ color: 'var(--c-primary)' }}>Document détecté</div>
+                  <div className="title-sm">{formData.title || 'Inconnu'}</div>
+                  <button onClick={() => setStep('upload')} style={{ color: 'var(--c-primary)', background: 'none', border: 'none', fontSize: '0.75rem', fontWeight: 600, padding: 0, marginTop: 4, cursor: 'pointer' }}>
+                    Changer de document
+                  </button>
                 </div>
               </div>
 
-              <button className="btn-primary mt-6" onClick={handleConfirm} disabled={isSaving}>
-                {isSaving ? 'Sécurisation...' : <><Check size={20} /> Valider l'enregistrement</>}
-              </button>
-            </>
+              <div className="space-y-4">
+                <div>
+                  <div className="label-xs">Nom du document (suggéré ✨)</div>
+                  <input className="input-field" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} />
+                </div>
+
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <div className="label-xs">Catégorie</div>
+                    <select className="input-field" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
+                      {['Identité', 'Finance', 'Santé', 'Contrat', 'Autre'].map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div className="label-xs">Échéance / Expiration</div>
+                    <input type="date" className="input-field" value={formData.expiresAt} onChange={e => setFormData({ ...formData, expiresAt: e.target.value })} />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="label-xs">Mots-clés (Tags)</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                    {formData.tags.map(tag => (
+                      <span key={tag} className="badge primary" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        {tag} <X size={12} onClick={() => setFormData({ ...formData, tags: formData.tags.filter(t => t !== tag) })} />
+                      </span>
+                    ))}
+                  </div>
+                  <input className="input-field" placeholder="Ajouter un tag..." value={tempTag} onKeyPress={e => {
+                    if (e.key === 'Enter' && tempTag) {
+                      setFormData({ ...formData, tags: [...formData.tags, tempTag] }); setTempTag('')
+                    }
+                  }} onChange={e => setTempTag(e.target.value)} />
+                </div>
+
+                <button className="btn-primary w-full mt-2" onClick={handleFinalSave} disabled={isSaving}>
+                  {isSaving ? 'Sécurisation progressive...' : <><ShieldCheck size={20} /> Valider l'archivage</>}
+                </button>
+              </div>
+            </div>
           )}
 
-          {/* ÉTAPE : TERMINÉ */}
           {step === 'done' && (
             <div style={{ textAlign: 'center', padding: '40px 0' }}>
-              <div className="avatar" style={{ margin: '0 auto 20px', background: 'var(--c-success-soft)', color: 'var(--c-success)', width: 64, height: 64 }}>
-                <Check size={32} />
+              <div className="avatar" style={{ background: 'var(--c-success-soft)', color: 'var(--c-success)', width: 80, height: 80, margin: '0 auto 24px' }}>
+                <Check size={44} className="pulse-fast" />
               </div>
-              <p className="title-sm">Archivé avec succès !</p>
-              <p className="body-sm" style={{ marginTop: 8 }}>Vérifiez vos rappels pour ce document.</p>
+              <p className="title-md">Document Arché !</p>
+              <p className="body-sm" style={{ marginTop: 10 }}>Vos données sont désormais protégées.</p>
             </div>
           )}
         </div>

@@ -1038,3 +1038,38 @@ h5 {
   padding-top: 16px;
   padding-bottom: 16px;
 }
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--c-primary);
+  width: 0%;
+  animation: progressLoad 3s ease-out forwards;
+}
+
+@keyframes progressLoad {
+  0% {
+    width: 0%
+  }
+
+  100% {
+    width: 100%
+  }
+}
+
+.input-field {
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--c-surface-2);
+  border: 1.5px solid var(--c-border);
+  border-radius: var(--r-md);
+  color: var(--c-text);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.input-field:focus {
+  border-color: var(--c-primary);
+  outline: none;
+  background: white;
+}
