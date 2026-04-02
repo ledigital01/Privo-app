@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react'
 import { supabase } from '../utils/supabaseClient'
 
 const AppContext = createContext()
@@ -9,249 +9,187 @@ export const AppProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
 
-  /* ---- PROFILE & DATA LOADING ---- */
-  const fetchProfile = async (userId) => {
-    if (!userId) return
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
-
-      if (data) {
-        setAuthUser(prev => ({
-          ...prev,
-          name: data.first_name || prev?.name,
-          lastName: data.last_name || prev?.lastName
-        }))
+  // 1. Initialisation de la session
+  useEffect(() => {
+    const initSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        setAuthUser({
+          id: session.user.id,
+          email: session.user.email,
+          name: session.user.user_metadata?.first_name || 'Utilisateur',
+          lastName: session.user.user_metadata?.last_name || '',
+          initials: (session.user.user_metadata?.first_name?.[0] || 'U').toUpperCase(),
+          plan: 'free'
+        })
+        fetchDocuments(session.user.id)
       }
-    } catch (err) {
-      console.error("Erreur profile:", err)
+      setLoading(false)
     }
-  }
 
+    initSession()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        setAuthUser({
+          id: session.user.id,
+          email: session.user.email,
+          name: session.user.user_metadata?.first_name || 'Utilisateur',
+          lastName: session.user.user_metadata?.last_name || '',
+          initials: (session.user.user_metadata?.first_name?.[0] || 'U').toUpperCase(),
+          plan: 'free'
+        })
+        fetchDocuments(session.user.id)
+      } else {
+        setAuthUser(null)
+        setDocuments([])
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  // 2. Charger les documents
   const fetchDocuments = async (userId) => {
-    if (!userId) return
     const { data, error } = await supabase
       .from('documents')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
 
-    if (data) setDocuments(data)
+    if (!error && data) {
+      // Transformation des noms de colonnes SQL -> State React
+      const docs = data.map(d => ({
+        id: d.id,
+        title: d.title,
+        type: d.type,
+        expiresAt: d.expires_at,
+        iconName: d.icon_name || 'file',
+        filePath: d.file_path,
+        createdAt: d.created_at
+      }))
+      setDocuments(docs)
+    }
   }
 
-  /* ---- AUTH SESSION ---- */
-  useEffect(() => {
-    // Initial check
-    supabase.auth.getSession().then(({ data, error }) => {
-      if (error) {
-        console.error("Auth Session Error:", error)
+  // 3. AJOUTER UN DOCUMENT (CORRIGÉ ✅)
+  const addDocument = async (docData, file) => {
+    if (!authUser) return { error: "Non authentifié" }
+
+    try {
+      let filePath = null
+
+      // Upload du fichier si présent
+      if (file) {
+        const fileExt = file.name.split('.').pop()
+        const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`
+        const path = `${authUser.id}/${fileName}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('documents')
+          .upload(path, file)
+
+        if (uploadError) throw uploadError
+        filePath = path
       }
-      if (data && data.session) {
-        const user = data.session.user
-        setAuthUser({
-          id: user.id,
-          email: user.email,
-          name: user.user_metadata?.first_name || 'Utilisateur',
-          lastName: user.user_metadata?.last_name || ''
-        })
-        fetchProfile(user.id)
-        fetchDocuments(user.id)
+
+      // Insertion en BDD
+      const { data, error } = await supabase
+        .from('documents')
+        .insert([{
+          user_id: authUser.id,
+          title: docData.title,
+          type: docData.type,
+          expires_at: docData.expiresAt,
+          icon_name: docData.iconName,
+          file_path: filePath
+        }])
+        .select()
+
+      if (error) throw error
+
+      // --- LA CORRECTION EST ICI ---
+      // On transforme le résultat de Supabase pour correspondre à notre state
+      const newDoc = {
+        id: data[0].id,
+        title: data[0].title,
+        type: data[0].type,
+        expiresAt: data[0].expires_at,
+        iconName: data[0].icon_name || 'file',
+        filePath: data[0].file_path,
+        createdAt: data[0].created_at
       }
-      setLoading(false)
-    }).catch(err => {
-      console.error("Erreur critique getSession:", err)
-      setLoading(false)
-    })
 
-    // Listen for changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        const user = session.user
-        setAuthUser({
-          id: user.id,
-          email: user.email,
-          name: user.user_metadata?.first_name || 'Utilisateur',
-          lastName: user.user_metadata?.last_name || ''
-        })
-        fetchProfile(user.id)
-        fetchDocuments(user.id)
-      } else {
-        setAuthUser(null)
-        setDocuments([])
-      }
-      setLoading(false)
-    })
+      // On ajoute le nouveau document en haut de la liste locale immédiatement !
+      setDocuments(prev => [newDoc, ...prev])
 
-    return () => subscription.unsubscribe()
-  }, [])
+      return { success: true, data: newDoc }
 
-  /* ---- AUTH ACTIONS ---- */
-  const sendVerificationCode = useCallback(async (email, password, name, lastName) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          first_name: name,
-          last_name: lastName
-        }
-      }
-    })
+    } catch (err) {
+      console.error("Erreur addDoc:", err)
+      return { error: err.message }
+    }
+  }
 
-    if (error) return { success: false, error: error.message }
-    return { success: true }
-  }, [])
+  // 4. Supprimer un document
+  const deleteDocument = async (id) => {
+    const { error } = await supabase.from('documents').delete().eq('id', id)
+    if (!error) {
+      setDocuments(prev => prev.filter(d => d.id !== id))
+    }
+  }
 
-  const verifyCode = useCallback(async (email, token) => {
-    const { data, error } = await supabase.auth.verifyOtp({
-      email,
-      token,
-      type: 'signup'
-    })
-
-    if (error) return { success: false, error: error.message }
-    return { success: true, user: data.user }
-  }, [])
-
-  const register = useCallback(async (name, email, password, lastName = '') => {
-    return { success: true }
-  }, [])
-
-  const login = useCallback(async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) return { success: false, error: error.message }
-    return { success: true, data }
-  }, [])
-
-  const logout = useCallback(async () => {
+  const logout = async () => {
     await supabase.auth.signOut()
     setAuthUser(null)
     setDocuments([])
-  }, [])
+  }
 
-  /* ---- DOC ACTIONS ---- */
-  const addDocument = useCallback(async (doc, file) => {
-    if (!authUser) return { error: "Déconnecté" }
-    
-    let fileUrl = null;
-    let filePath = null;
-
-    if (file) {
-      // 1. Generate unique file name
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
-      filePath = `${authUser.id}/${fileName}`;
-      
-      // 2. Upload file to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(filePath, file);
-        
-      if (uploadError) {
-        console.error("Erreur d'upload :", uploadError);
-        return { error: "Échec de l'upload du fichier." }
-      }
-      
-      // Optional: Get a public or signed URL if you want immediate display
-      // const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(filePath)
+  // Stats calculées
+  const stats = useMemo(() => {
+    const now = new Date()
+    const soon = new Date(now.getTime() + (30 * 24 * 60 * 60 * 1000))
+    return {
+      total: documents.length,
+      expiringSoon: documents.filter(d => d.expiresAt && new Date(d.expiresAt) < soon).length,
+      recent: documents.filter(d => new Date(d.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length
     }
-
-    const newDoc = { 
-      ...doc, 
-      user_id: authUser.id,
-      file_path: filePath, // Requires updating the table schema
-    }
-    
-    // We do not pass `id` to let Postgres generate it
-    delete newDoc.id 
-
-    // 3. Save to DB
-    const { data, error } = await supabase
-      .from('documents')
-      .insert([newDoc])
-      .select()
-
-    if (error) {
-      console.error("Erreur bdd :", error);
-      return { error: "Erreur lors de l'enregistrement en BDD." }
-    }
-
-    if (data) {
-      setDocuments(prev => [data[0], ...prev])
-      return { success: true }
-    }
-  }, [authUser])
-
-  const deleteDocument = useCallback(async (id) => {
-    const { error } = await supabase
-      .from('documents')
-      .delete()
-      .eq('id', id)
-    
-    if (!error) setDocuments(prev => prev.filter(d => d.id !== id))
-  }, [])
-
-  const updateDocument = useCallback(async (id, updates) => {
-    const { data, error } = await supabase
-      .from('documents')
-      .update(updates)
-      .eq('id', id)
-      .select()
-
-    if (data) setDocuments(prev => prev.map(d => d.id === id ? data[0] : d))
-  }, [])
-
-  const filteredDocuments = useMemo(() => {
-    if (!searchQuery) return documents
-    return documents.filter(doc => 
-      doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.category?.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  }, [documents, searchQuery])
-
-  // Calcule les documents expirant dans moins de 30 jours
-  const expiringDocs = useMemo(() => {
-    const soon = Date.now() + 30 * 24 * 60 * 60 * 1000
-    return documents.filter(d => d.expiresAt && new Date(d.expiresAt).getTime() < soon)
   }, [documents])
 
-  const stats = useMemo(() => ({
-    total: documents.length,
-    recent: documents.filter(d => (Date.now() - new Date(d.created_at).getTime()) < 7 * 24 * 60 * 60 * 1000).length,
-    expiringSoon: expiringDocs.length
-  }), [documents, expiringDocs])
+  const expiringDocs = useMemo(() => {
+    const soon = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+    return documents.filter(d => d.expiresAt && new Date(d.expiresAt) < soon)
+  }, [documents])
 
-  return (
-    <AppContext.Provider value={{
-      /* auth */
-      isAuthenticated: !!authUser, authUser, register, login, logout, sendVerificationCode, verifyCode, profileLoading: loading,
-      /* docs */
-      documents, filteredDocuments, addDocument, deleteDocument, updateDocument,
-      /* stats */
-      stats, expiringDocs,
-      /* search */
-      searchQuery, setSearchQuery
-    }}>
-      {children}
-    </AppContext.Provider>
-  )
+  const filteredDocuments = useMemo(() => {
+    return documents.filter(d => d.title.toLowerCase().includes(searchQuery.toLowerCase()))
+  }, [documents, searchQuery])
+
+  const value = {
+    authUser, documents, loading, stats, expiringDocs, searchQuery, filteredDocuments,
+    setSearchQuery, addDocument, deleteDocument, logout, isAuthenticated: !!authUser
+  }
+
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>
 }
 
 export const useApp = () => useContext(AppContext)
+
+// Helpers
 export const getDocStatus = (expiry) => {
-  if (!expiry) return 'normal'
-  const days = Math.ceil((new Date(expiry) - new Date()) / (1000 * 60 * 60 * 24))
-  if (days < 0) return 'expired'
-  if (days <= 30) return 'warn'
-  return 'normal'
+  if (!expiry) return 'ok'
+  const diff = (new Date(expiry) - new Date()) / (1000 * 60 * 60 * 24)
+  if (diff < 0) return 'danger'
+  if (diff < 30) return 'warn'
+  return 'ok'
 }
+
 export const formatExpiry = (date) => {
-  if (!date) return ''
-  return new Intl.RelativeTimeFormat('fr', { numeric: 'auto' }).format(
-    Math.ceil((new Date(date) - new Date()) / (1000 * 60 * 60 * 24)),
-    'day'
-  )
+  if (!date) return 'Pas d\'expiration'
+  const d = new Date(date)
+  const diff = (d - new Date()) / (1000 * 60 * 60 * 24)
+  const str = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+  if (diff < 0) return `Expiré (${str})`
+  if (diff < 30) return `⚠️ Expire dans ${Math.ceil(diff)}j`
+  return `Expire le ${str}`
 }
