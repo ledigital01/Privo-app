@@ -13,45 +13,59 @@ serve(async (req) => {
   }
 
   try {
+    // 1. Initialiser le client
     const { documentId, filePath, userId } = await req.json()
+    console.log(`[START] Traitement du document: ${filePath} pour l'user: ${userId}`)
 
-    // 1. Initialiser le client Supabase avec l'Admin Role (pour lire les fichiers privés de l'utilisateur)
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // 2. Télécharger le fichier depuis Supabase Storage
+    // 2. Télécharger
+    console.log(`[INFO] Téléchargement du fichier...`)
     const { data: fileData, error: downloadError } = await supabaseClient
       .storage
       .from('documents')
       .download(filePath)
 
-    if (downloadError) throw downloadError
+    if (downloadError) {
+      console.error("[ERROR] Téléchargement échoué:", downloadError)
+      throw downloadError
+    }
 
-    // 3. Convertir le fichier en Base64 pour l'envoyer à Groq
+    // 3. Convertir (Correction : Méthode robuste pour gros fichiers)
+    console.log(`[INFO] Encodage Base64...`)
     const arrayBuffer = await fileData.arrayBuffer()
-    const base64Str = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+    const uint8Array = new Uint8Array(arrayBuffer)
+    let binary = ''
+    const chunk = 8192
+    for (let i = 0; i < uint8Array.length; i += chunk) {
+      binary += String.fromCharCode.apply(null, uint8Array.slice(i, i + chunk))
+    }
+    const base64Str = btoa(binary)
     const mimeType = fileData.type || 'image/jpeg'
     const base64Url = `data:${mimeType};base64,${base64Str}`
 
-    // 4. Appel à l'API Groq (Compatible OpenAI)
+    // 4. Appel à l'API Groq
     const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY')
     if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY n'est pas configuré.")
 
+    console.log(`[INFO] Appel API Groq (Llama Vision)...`)
     const promptText = `
-      Tu es l'assistant de sécurité de Privo. Analyse ce document.
-      Extrais les informations sous forme d'objet JSON strict :
+      Analyse ce document (scan CNI, Passeport, Facture, etc.).
+      Extrais exactement cet objet JSON :
       {
-        "detected_type": "Passeport / CNI / Contrat / Facture / Inconnu",
-        "confidence_score": 0.95,
-        "extracted_text": "Le texte brut pertinent lu",
-        "extracted_data": {"Nom": "xxx", "Date": "xxx"},
-        "summary": "Un bref résumé du document"
+        "detected_type": "Passport / ID_Card / Invoice / Receipt / License / Diploma / Other",
+        "extracted_data": {
+           "Nom": "Nom complet si lisible",
+           "Expiration": "DD/MM/YYYY si présente",
+           "Emetteur": "Source du document"
+        },
+        "suggested_tags": ["tag1", "tag2"]
       }
     `
 
-    // Note : Groq a récemment sorti llama-3.2-90b-vision-preview pour les images
     const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -59,7 +73,7 @@ serve(async (req) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'llama-3.2-90b-vision-preview',
+        model: 'llama-3.2-11b-vision-preview', // Passage au modèle 11b pour plus de rapidité
         messages: [
           {
             role: 'user',
@@ -69,19 +83,20 @@ serve(async (req) => {
             ]
           }
         ],
-        temperature: 0.2, // Mode analytique
-        response_format: { type: "json_object" } // Sécuriser la réponse en JSON
+        temperature: 0.1,
+        response_format: { type: "json_object" }
       })
     })
 
     if (!groqResponse.ok) {
-      const errorData = await groqResponse.text()
-      console.error("Groq Error:", errorData)
-      throw new Error(`Erreur API Groq: ${errorData}`)
+      const errorText = await groqResponse.text()
+      console.error("[ERROR] Groq API Response Error:", errorText)
+      throw new Error(`API Groq: ${errorText}`)
     }
 
     const aiData = await groqResponse.json()
     const aiResult = JSON.parse(aiData.choices[0].message.content)
+    console.log(`[SUCCESS] Analyse terminée:`, aiResult)
 
     // 5. Sauvegarder les résultats dans notre base de données "document_ai_analysis"
     const { error: insertError } = await supabaseClient
@@ -90,10 +105,7 @@ serve(async (req) => {
         document_id: documentId,
         user_id: userId,
         detected_type: aiResult.detected_type,
-        confidence_score: aiResult.confidence_score,
-        extracted_text: aiResult.extracted_text,
         extracted_data: aiResult.extracted_data,
-        summary: aiResult.summary,
         processing_status: 'completed',
         processed_at: new Date().toISOString()
       }, { onConflict: 'document_id' })
@@ -106,7 +118,7 @@ serve(async (req) => {
     })
 
   } catch (error) {
-    console.error("Fonction Error:", error)
+    console.error("[CRITICAL ERROR]:", error)
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
