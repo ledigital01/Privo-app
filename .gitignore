@@ -26,3 +26,4 @@ dist-ssr
 # Agents & Skills info (ignoring temp files if any)
 .agents_temp
 /tmp/
+supabase/.env
