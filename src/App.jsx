@@ -11,17 +11,18 @@ import {
 
 import { AppProvider, useApp, getDocStatus, formatExpiry } from './store/AppContext'
 import SubscriptionPage from './pages/SubscriptionPage'
-import LoginPage    from './pages/LoginPage'
+import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import './index.css'
+import { supabase } from './utils/supabaseClient'
 
 /* ================================================================
    ICON MAP — converts stored string → JSX icon
    ================================================================ */
 const ICON_MAP = {
-  user:   (s) => <User size={s || 22} />,
-  file:   (s) => <FileText size={s || 22} />,
-  card:   (s) => <CreditCard size={s || 22} />,
+  user: (s) => <User size={s || 22} />,
+  file: (s) => <FileText size={s || 22} />,
+  card: (s) => <CreditCard size={s || 22} />,
   shield: (s) => <Shield size={s || 22} />,
 }
 const getIcon = (name, size) => (ICON_MAP[name] || ICON_MAP.file)(size)
@@ -30,9 +31,9 @@ const getIcon = (name, size) => (ICON_MAP[name] || ICON_MAP.file)(size)
    BOTTOM NAVIGATION
    ================================================================ */
 function BottomNav({ onAddClick }) {
-  const navigate  = useNavigate()
-  const location  = useLocation()
-  const isActive  = (path) => location.pathname === path
+  const navigate = useNavigate()
+  const location = useLocation()
+  const isActive = (path) => location.pathname === path
 
   return (
     <nav className="bottom-nav">
@@ -62,22 +63,43 @@ const CATEGORIES = ['Identité', 'Finance', 'Santé', 'Contrats', 'Études', 'Au
 
 function AddDocumentModal({ isOpen, onClose, onScanClick }) {
   const { addDocument } = useApp()
-  const [step, setStep]       = useState('method') // 'method' | 'form'
-  const [form, setForm]       = useState({ title: '', type: 'Identité', expiresAt: '', iconName: 'file' })
-  const [error, setError]     = useState('')
+  const [step, setStep] = useState('method') // 'method' | 'form'
+  const [form, setForm] = useState({ title: '', type: 'Identité', expiresAt: '', iconName: 'file' })
+  const [error, setError] = useState('')
+  const [file, setFile] = useState(null)
+  const [isUploading, setIsUploading] = useState(false)
 
-  const reset = () => { setStep('method'); setForm({ title: '', type: 'Identité', expiresAt: '', iconName: 'file' }); setError('') }
+  const reset = () => { setStep('method'); setFile(null); setForm({ title: '', type: 'Identité', expiresAt: '', iconName: 'file' }); setError('') }
   const handleClose = () => { reset(); onClose() }
 
-  const handleSubmit = () => {
+  // Gestion du choix de fichier manuel
+  const handleFileSelect = (e) => {
+    const selected = e.target.files[0]
+    if (selected) {
+      setFile(selected)
+      setForm(f => ({ ...f, title: selected.name.split('.')[0] })) // Pré-remplit le nom
+      setStep('form')
+    }
+  }
+
+  const handleSubmit = async () => {
     if (!form.title.trim()) { setError('Le nom du document est requis.'); return }
-    addDocument({
-      title:     form.title.trim(),
-      type:      form.type,
+    if (!file) { setError('Veuillez sélectionner un fichier.'); return }
+
+    setIsUploading(true)
+    const result = await addDocument({
+      title: form.title.trim(),
+      type: form.type,
       expiresAt: form.expiresAt || null,
-      iconName:  form.iconName,
-    })
-    handleClose()
+      iconName: form.iconName,
+    }, file)
+
+    setIsUploading(false)
+    if (result && result.error) {
+      setError(result.error)
+    } else {
+      handleClose()
+    }
   }
 
   if (!isOpen) return null
@@ -87,7 +109,7 @@ function AddDocumentModal({ isOpen, onClose, onScanClick }) {
       <div className="modal-sheet" onClick={e => e.stopPropagation()}>
         <div className="modal-handle" />
 
-        {/* STEP: METHOD */}
+        {/* ÉTAPE : CHOIX DE MÉTHODE */}
         {step === 'method' && (
           <>
             <div className="modal-header">
@@ -96,6 +118,7 @@ function AddDocumentModal({ isOpen, onClose, onScanClick }) {
             </div>
             <p className="body-sm" style={{ padding: '4px 24px 0' }}>Choisissez une méthode.</p>
             <div className="modal-body">
+              {/* BOUTON SCAN IA */}
               <button className="action-row" onClick={() => { onClose(); onScanClick() }}>
                 <div className="icon-wrap md primary"><Camera size={24} /></div>
                 <div style={{ flex: 1 }}>
@@ -104,104 +127,59 @@ function AddDocumentModal({ isOpen, onClose, onScanClick }) {
                 </div>
                 <ChevronRight size={18} color="var(--c-text-muted)" />
               </button>
-              <button className="action-row" onClick={() => setStep('form')}>
+
+              {/* BOUTON IMPORT MANUEL */}
+              <label className="action-row" style={{ cursor: 'pointer' }}>
                 <div className="icon-wrap md primary"><UploadCloud size={24} /></div>
                 <div style={{ flex: 1 }}>
                   <div className="action-text">Importer / Saisir</div>
                   <div className="action-desc">Remplissez les informations manuellement.</div>
                 </div>
                 <ChevronRight size={18} color="var(--c-text-muted)" />
-              </button>
+                <input type="file" hidden onChange={handleFileSelect} />
+              </label>
             </div>
           </>
         )}
 
-        {/* STEP: FORM */}
+        {/* ÉTAPE : FORMULAIRE FINAL */}
         {step === 'form' && (
           <>
             <div className="modal-header">
               <button className="modal-close-btn" onClick={() => setStep('method')}><ChevronLeft size={18} /></button>
-              <h2 className="title-md">Nouveau document</h2>
+              <h2 className="title-md">Finaliser l'ajout</h2>
               <button className="modal-close-btn" onClick={handleClose}><X size={18} /></button>
             </div>
             <div className="modal-body">
-
-              {/* Nom */}
               <div>
                 <div className="label-xs" style={{ marginBottom: 8 }}>Nom du document *</div>
                 <input
                   type="text"
                   value={form.title}
                   onChange={e => { setForm(f => ({ ...f, title: e.target.value })); setError('') }}
-                  placeholder="ex: Passeport, Contrat de travail…"
-                  style={{
-                    width: '100%', padding: '14px 16px',
-                    background: 'var(--c-surface-2)', border: '1.5px solid var(--c-border)',
-                    borderRadius: 'var(--r-md)', fontSize: '0.9rem',
-                    color: 'var(--c-text)', fontFamily: 'Inter',
-                  }}
+                  style={{ width: '100%', padding: '14px 16px', background: 'var(--c-surface-2)', border: '1.5px solid var(--c-border)', borderRadius: 'var(--r-md)' }}
                 />
                 {error && <p style={{ color: 'var(--c-danger)', fontSize: '0.8rem', marginTop: 6 }}>{error}</p>}
               </div>
 
-              {/* Catégorie */}
               <div>
                 <div className="label-xs" style={{ marginBottom: 8 }}>Catégorie</div>
                 <select
                   value={form.type}
                   onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
-                  style={{
-                    width: '100%', padding: '14px 16px',
-                    background: 'var(--c-surface-2)', border: '1.5px solid var(--c-border)',
-                    borderRadius: 'var(--r-md)', fontSize: '0.9rem',
-                    color: 'var(--c-text)', fontFamily: 'Inter', appearance: 'none',
-                  }}
+                  style={{ width: '100%', padding: '14px 16px', background: 'var(--c-surface-2)', border: '1.5px solid var(--c-border)', borderRadius: 'var(--r-md)' }}
                 >
                   {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
 
-              {/* Icône */}
-              <div>
-                <div className="label-xs" style={{ marginBottom: 8 }}>Type d'icône</div>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  {[['file', <FileText size={20} />], ['user', <User size={20} />], ['card', <CreditCard size={20} />]].map(([name, icon]) => (
-                    <button
-                      key={name}
-                      onClick={() => setForm(f => ({ ...f, iconName: name }))}
-                      style={{
-                        flex: 1, padding: '14px', borderRadius: 'var(--r-md)',
-                        border: `2px solid ${form.iconName === name ? 'var(--c-primary)' : 'var(--c-border)'}`,
-                        background: form.iconName === name ? 'var(--c-primary-soft)' : 'var(--c-surface-2)',
-                        color: form.iconName === name ? 'var(--c-primary)' : 'var(--c-text-muted)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        transition: 'all 0.15s',
-                      }}
-                    >
-                      {icon}
-                    </button>
-                  ))}
-                </div>
+              <div className="insight-card" style={{ background: 'var(--c-primary-soft)', border: 'none' }}>
+                <FileText size={18} color="var(--c-primary)" />
+                <span className="body-sm" style={{ color: 'var(--c-primary)' }}>Fichier prêt : {file?.name}</span>
               </div>
 
-              {/* Date d'expiration */}
-              <div>
-                <div className="label-xs" style={{ marginBottom: 8 }}>Date d'expiration (optionnel)</div>
-                <input
-                  type="date"
-                  value={form.expiresAt}
-                  onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))}
-                  style={{
-                    width: '100%', padding: '14px 16px',
-                    background: 'var(--c-surface-2)', border: '1.5px solid var(--c-border)',
-                    borderRadius: 'var(--r-md)', fontSize: '0.9rem',
-                    color: 'var(--c-text)', fontFamily: 'Inter',
-                  }}
-                />
-              </div>
-
-              <button className="btn-primary mt-4" onClick={handleSubmit}>
-                <Check size={20} /> Enregistrer le document
+              <button className="btn-primary mt-4" onClick={handleSubmit} disabled={isUploading}>
+                {isUploading ? 'Enregistrement sécurisé...' : <><Check size={20} /> Enregistrer dans le coffre</>}
               </button>
             </div>
           </>
@@ -315,69 +293,178 @@ function EditDocumentModal({ isOpen, onClose, doc }) {
 
 
 /* ================================================================
-   MODAL — IA SCAN (saves a real document)
+   MODAL — IA SCAN (Version Réelle avec Groq & Supabase)
    ================================================================ */
 function IAScanModal({ isOpen, onClose }) {
-  const { addDocument } = useApp()
-  const [done, setDone] = useState(false)
+  const { authUser, addDocument } = useApp()
+  const [step, setStep] = useState('upload') // 'upload' | 'processing' | 'result' | 'done'
+  const [file, setFile] = useState(null)
+  const [aiData, setAiData] = useState(null)
+  const [isSaving, setIsSaving] = useState(false)
 
-  const handleConfirm = () => {
-    addDocument({
-      title: 'Passeport Français',
-      type: 'Identité',
-      expiresAt: '2029-10-12',
-      iconName: 'user',
-    })
-    setDone(true)
-    setTimeout(() => { setDone(false); onClose() }, 1500)
+  const reset = () => {
+    setStep('upload')
+    setFile(null)
+    setAiData(null)
+    setIsSaving(false)
+  }
+
+  const handleClose = () => {
+    reset()
+    onClose()
+  }
+
+  // --- ÉTAPE 1 : Sélection et envoi au Cerveau IA ---
+  const handleFileChange = async (e) => {
+    const selectedFile = e.target.files[0]
+    if (!selectedFile) return
+
+    setFile(selectedFile)
+    setStep('processing')
+
+    try {
+      // 1. Upload temporaire pour l'IA
+      const fileExt = selectedFile.name.split('.').pop()
+      const fileName = `ai_scan_${Date.now()}.${fileExt}`
+      const filePath = `${authUser.id}/${fileName}`
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(filePath, selectedFile)
+
+      if (uploadError) throw uploadError
+
+      // 2. Appel de la fonction Edge "process_document"
+      const { data, error: funcError } = await supabase.functions.invoke('process_document', {
+        body: { documentId: null, filePath: filePath, userId: authUser.id }
+      })
+
+      if (funcError) throw funcError
+
+      // 3. Récupération des données extraites par Groq
+      setAiData({
+        ...data.result,
+        filePath: filePath // On garde le lien du fichier
+      })
+      setStep('result')
+
+    } catch (error) {
+      alert("Erreur IA : " + error.message)
+      setStep('upload')
+    }
+  }
+
+  // --- ÉTAPE 2 : Confirmation finale dans le coffre ---
+  const handleConfirm = async () => {
+    setIsSaving(true)
+    try {
+      await addDocument({
+        title: aiData.extracted_data?.Nom || aiData.detected_type,
+        type: aiData.detected_type,
+        expiresAt: aiData.extracted_data?.Expiration || null,
+        iconName: aiData.detected_type === 'Identité' ? 'user' : 'file',
+      }, file) // On réutilise le fichier déjà sélectionné
+
+      setStep('done')
+      setTimeout(() => {
+        handleClose()
+      }, 2000)
+    } catch (e) {
+      alert("Erreur lors de l'enregistrement.")
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   if (!isOpen) return null
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={handleClose}>
       <div className="modal-sheet" onClick={e => e.stopPropagation()}>
         <div className="modal-handle" />
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Zap size={20} color="var(--c-primary-mid)" />
-            <h2 className="title-md">Résultat IA</h2>
+            <Zap size={20} color="var(--c-primary)" />
+            <h2 className="title-md">{step === 'result' ? 'Analyse terminée' : 'Scan Intelligent IA'}</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}><X size={18} /></button>
+          <button className="modal-close-btn" onClick={handleClose}><X size={18} /></button>
         </div>
+
         <div className="modal-body">
-          {done ? (
+          {/* ETAPE : UPLOAD */}
+          {step === 'upload' && (
             <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--c-success-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                <CheckCircle size={36} color="var(--c-success)" />
-              </div>
-              <p className="title-sm">Document enregistré !</p>
+              <div className="icon-wrap lg primary" style={{ margin: '0 auto 20px' }}><Camera size={32} /></div>
+              <p className="title-sm">Prenez une photo du document</p>
+              <p className="body-sm" style={{ marginBottom: 24, marginTop: 8 }}>L'IA de Privo va extraire les dates, noms et catégories automatiquement.</p>
+
+              <label className="btn-primary" style={{ cursor: 'pointer', display: 'inline-flex' }}>
+                <UploadCloud size={20} /> Sélectionner / Photographier
+                <input type="file" hidden accept="image/*" onChange={handleFileChange} />
+              </label>
             </div>
-          ) : (
-            <>
-              <div className="doc-preview" style={{ marginBottom: 4 }}>
-                <div className="icon-wrap lg primary"><User size={30} /></div>
-                <span className="label-xs">Aperçu du scan</span>
+          )}
+
+          {/* ETAPE : CHARGEMENT IA */}
+          {step === 'processing' && (
+            <div style={{ textAlign: 'center', padding: '40px 0' }}>
+              <div className="doc-preview" style={{ marginBottom: 20 }}>
                 <div className="scan-line" />
+                <div className="icon-wrap lg primary"><Zap size={30} className="pulse" /></div>
               </div>
-              <div className="label-xs" style={{ paddingLeft: 4, marginTop: 8 }}>Données extraites</div>
-              {[
-                { icon: <User size={18} color="var(--c-primary-mid)" />, label: 'Nom', value: 'Passeport Français' },
-                { icon: <FileText size={18} color="var(--c-primary-mid)" />, label: 'Catégorie', value: 'Identité' },
-                { icon: <Calendar size={18} color="var(--c-warn)" />, label: 'Expiration', value: '12 Oct. 2029' },
-              ].map((row, i) => (
-                <div key={i} className="card" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px' }}>
-                  {row.icon}
+              <p className="title-sm">L'IA de Privo analyse...</p>
+              <p className="body-sm" style={{ marginTop: 8 }}>Extraction des informations en cours avec Groq Llama 3.2.</p>
+            </div>
+          )}
+
+          {/* ETAPE : RESULTAT */}
+          {step === 'result' && aiData && (
+            <>
+              <div className="insight-card" style={{ background: 'var(--c-success-soft)', border: 'none', marginBottom: 16 }}>
+                <ShieldCheck size={20} color="var(--c-success)" />
+                <p className="body-sm" style={{ color: 'var(--c-success)', fontWeight: 600 }}>Structure détectée avec succès !</p>
+              </div>
+
+              <div className="label-xs" style={{ marginBottom: 8 }}>Données extraites par l'IA</div>
+              <div className="space-y-3">
+                <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px' }}>
+                  <FileText size={18} color="var(--c-primary)" />
                   <div>
-                    <div className="label-xs">{row.label}</div>
-                    <div className="title-sm">{row.value}</div>
+                    <div className="label-xs">Type de document</div>
+                    <div className="title-sm">{aiData.detected_type}</div>
                   </div>
                 </div>
-              ))}
-              <button className="btn-primary mt-4" onClick={handleConfirm}>
-                <Check size={20} /> Enregistrer le document
+                <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px' }}>
+                  <User size={18} color="var(--c-primary)" />
+                  <div>
+                    <div className="label-xs">Détails détectés</div>
+                    <div className="title-sm">{aiData.extracted_data?.Nom || 'Non spécifié'}</div>
+                  </div>
+                </div>
+                <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px' }}>
+                  <Calendar size={18} color="var(--c-warn)" />
+                  <div>
+                    <div className="label-xs">Date d'expiration</div>
+                    <div className="title-sm">{aiData.extracted_data?.Expiration || 'Non détectée'}</div>
+                  </div>
+                </div>
+              </div>
+
+              <button className="btn-primary mt-6" onClick={handleConfirm} disabled={isSaving}>
+                {isSaving ? 'Enregistrement...' : <><Check size={20} /> Confirmer et Ranger</>}
               </button>
             </>
+          )}
+
+          {/* ETAPE : FINI */}
+          {step === 'done' && (
+            <div style={{ textAlign: 'center', padding: '40px 0' }}>
+              <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--c-success-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <Check size={36} color="var(--c-success)" />
+              </div>
+              <p className="title-sm">C'est dans le coffre !</p>
+              <p className="body-sm" style={{ marginTop: 8 }}>Votre document a été classé et sécurisé.</p>
+            </div>
           )}
         </div>
       </div>
@@ -385,14 +472,6 @@ function IAScanModal({ isOpen, onClose }) {
   )
 }
 
-/* Petit CheckCircle inline */
-function CheckCircle({ size, color }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
-    </svg>
-  )
-}
 
 /* ================================================================
    MODAL — DELETE CONFIRMATION
@@ -493,9 +572,9 @@ function Dashboard({ onAddClick }) {
   const isEmpty = documents.length === 0
 
   const STAT_CARDS = [
-    { label: 'Total',    value: stats.total,       icon: <FolderOpen size={20} />, type: 'primary' },
-    { label: 'Expirant', value: stats.expiringSoon, icon: <Clock size={20} />,      type: stats.expiringSoon > 0 ? 'warn' : 'success' },
-    { label: 'Récents',  value: stats.recent,       icon: <Zap size={20} />,        type: 'success' },
+    { label: 'Total', value: stats.total, icon: <FolderOpen size={20} />, type: 'primary' },
+    { label: 'Expirant', value: stats.expiringSoon, icon: <Clock size={20} />, type: stats.expiringSoon > 0 ? 'warn' : 'success' },
+    { label: 'Récents', value: stats.recent, icon: <Zap size={20} />, type: 'success' },
   ]
 
   return (
@@ -557,10 +636,10 @@ function Dashboard({ onAddClick }) {
             </div>
 
             {[
-              { icon: <User size={22} />,     title: "Ajouter ma pièce d'identité",  desc: 'CNI, passeport, permis de conduire',   color: 'primary' },
-              { icon: <FileText size={22} />, title: 'Importer un contrat',           desc: 'Bail, travail, assurance…',             color: 'success' },
-              { icon: <CreditCard size={22}/>, title: 'Sécuriser mes finances',       desc: 'Fiches de paie, relevés bancaires',     color: 'warn'    },
-              { icon: <GraduationCap size={22}/>, title: 'Dossier étudiant',           desc: 'Diplômes, relevés, attestations',       color: 'primary' },
+              { icon: <User size={22} />, title: "Ajouter ma pièce d'identité", desc: 'CNI, passeport, permis de conduire', color: 'primary' },
+              { icon: <FileText size={22} />, title: 'Importer un contrat', desc: 'Bail, travail, assurance…', color: 'success' },
+              { icon: <CreditCard size={22} />, title: 'Sécuriser mes finances', desc: 'Fiches de paie, relevés bancaires', color: 'warn' },
+              { icon: <GraduationCap size={22} />, title: 'Dossier étudiant', desc: 'Diplômes, relevés, attestations', color: 'primary' },
             ].map((item, i) => (
               <button
                 key={i}
@@ -583,10 +662,10 @@ function Dashboard({ onAddClick }) {
             ))}
 
             {/* Security reassurance */}
-            <div style={{ 
-              display: 'flex', alignItems: 'center', gap: 12, 
-              background: 'transparent', borderRadius: 'var(--r-md)', 
-              padding: '10px 14px', border: '1px solid var(--c-border)', 
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              background: 'transparent', borderRadius: 'var(--r-md)',
+              padding: '10px 14px', border: '1px solid var(--c-border)',
               marginTop: 8, opacity: 0.8
             }}>
               <ShieldCheck size={18} color="var(--c-primary)" style={{ flexShrink: 0 }} />
@@ -855,10 +934,10 @@ function ProfilePage() {
 
   const MENU = [
     { icon: <CreditCard size={20} />, label: 'Abonnement & Paiements', desc: `Plan actuel : ${user.plan === 'free' ? 'Gratuit' : user.plan === 'pro' ? 'Pro' : 'Business'}`, path: '/subscription', action: null, color: 'primary' },
-    { icon: <Shield size={20} />,     label: 'Sécurité',               desc: 'Biométrie, PIN, 2FA',             path: null, action: showComingSoon, color: 'success' },
-    { icon: <Settings size={20} />,   label: 'Paramètres',             desc: 'Langue, notifications',           path: null, action: showComingSoon, color: 'neutral' },
-    { icon: <HelpCircle size={20} />, label: 'Aide & Support',         desc: "FAQ, contacter l'équipe",         path: null, action: showComingSoon, color: 'neutral' },
-    { icon: <LogOut size={20} />,     label: 'Déconnexion',            desc: null,                              path: null, action: handleLogout, color: 'danger'  },
+    { icon: <Shield size={20} />, label: 'Sécurité', desc: 'Biométrie, PIN, 2FA', path: null, action: showComingSoon, color: 'success' },
+    { icon: <Settings size={20} />, label: 'Paramètres', desc: 'Langue, notifications', path: null, action: showComingSoon, color: 'neutral' },
+    { icon: <HelpCircle size={20} />, label: 'Aide & Support', desc: "FAQ, contacter l'équipe", path: null, action: showComingSoon, color: 'neutral' },
+    { icon: <LogOut size={20} />, label: 'Déconnexion', desc: null, path: null, action: handleLogout, color: 'danger' },
   ]
 
 
@@ -925,10 +1004,10 @@ function ProfilePage() {
    APP SHELL
    ================================================================ */
 function AppContent() {
-  const navigate    = useNavigate()
+  const navigate = useNavigate()
   const { deleteDocument } = useApp()
 
-  const [modal,       setModal]       = useState(null) // 'ADD' | 'SCAN' | 'SHARE' | 'DELETE'
+  const [modal, setModal] = useState(null) // 'ADD' | 'SCAN' | 'SHARE' | 'DELETE'
   const [selectedDoc, setSelectedDoc] = useState(null)
 
   const handleDocClick = (doc) => { setSelectedDoc(doc); navigate('/detail') }
@@ -946,11 +1025,11 @@ function AppContent() {
       <div className="app-shell">
         <div className="page-bg-blur" />
         <Routes>
-          <Route path="/"             element={<Dashboard onAddClick={() => setModal('ADD')} />} />
-          <Route path="/documents"    element={<Library onDocClick={handleDocClick} />} />
-          <Route path="/detail"       element={<DocumentDetail doc={selectedDoc} onBack={() => navigate(-1)} onShare={() => setModal('SHARE')} onDeleteRequest={handleDeleteRequest} onEditRequest={() => setModal('EDIT')} />} />
+          <Route path="/" element={<Dashboard onAddClick={() => setModal('ADD')} />} />
+          <Route path="/documents" element={<Library onDocClick={handleDocClick} />} />
+          <Route path="/detail" element={<DocumentDetail doc={selectedDoc} onBack={() => navigate(-1)} onShare={() => setModal('SHARE')} onDeleteRequest={handleDeleteRequest} onEditRequest={() => setModal('EDIT')} />} />
           <Route path="/notifications" element={<NotificationsPage onDocClick={handleDocClick} />} />
-          <Route path="/profile"      element={<ProfilePage />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/subscription" element={<SubscriptionPage onBack={() => navigate(-1)} />} />
         </Routes>
         <BottomNav onAddClick={() => setModal('ADD')} />
@@ -970,12 +1049,12 @@ function AppContent() {
 
       </div>
 
-      <AddDocumentModal  isOpen={modal === 'ADD'}    onClose={() => setModal(null)} onScanClick={handleScanClick} />
-      <EditDocumentModal isOpen={modal === 'EDIT'}   onClose={() => setModal(null)} doc={selectedDoc} />
-      <IAScanModal       isOpen={modal === 'SCAN'}   onClose={() => setModal(null)} />
-      <QuickShareModal   isOpen={modal === 'SHARE'}  onClose={() => setModal(null)} />
-      <DeleteModal       isOpen={modal === 'DELETE'} doc={selectedDoc} onClose={() => setModal(null)} onConfirm={handleDeleteConfirm} />
-      <AIChatModal       isOpen={modal === 'CHAT'}   onClose={() => setModal(null)} />
+      <AddDocumentModal isOpen={modal === 'ADD'} onClose={() => setModal(null)} onScanClick={handleScanClick} />
+      <EditDocumentModal isOpen={modal === 'EDIT'} onClose={() => setModal(null)} doc={selectedDoc} />
+      <IAScanModal isOpen={modal === 'SCAN'} onClose={() => setModal(null)} />
+      <QuickShareModal isOpen={modal === 'SHARE'} onClose={() => setModal(null)} />
+      <DeleteModal isOpen={modal === 'DELETE'} doc={selectedDoc} onClose={() => setModal(null)} onConfirm={handleDeleteConfirm} />
+      <AIChatModal isOpen={modal === 'CHAT'} onClose={() => setModal(null)} />
     </>
   )
 }
@@ -1023,10 +1102,10 @@ function AIChatModal({ isOpen, onClose }) {
           </div>
           <button className="modal-close-btn" onClick={onClose}><X size={18} /></button>
         </div>
-        
+
         <div className="modal-body no-scrollbar" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
           {messages.map((m, i) => (
-            <div key={i} style={{ 
+            <div key={i} style={{
               alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
               background: m.role === 'user' ? 'var(--c-primary)' : 'var(--c-surface-2)',
               color: m.role === 'user' ? 'white' : 'var(--c-text)',
@@ -1052,16 +1131,16 @@ function AIChatModal({ isOpen, onClose }) {
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSend()}
             placeholder="Demander quelque chose..."
-            style={{ 
-              flex: 1, background: 'var(--c-surface-2)', border: '1px solid var(--c-border)', 
+            style={{
+              flex: 1, background: 'var(--c-surface-2)', border: '1px solid var(--c-border)',
               borderRadius: '24px', padding: '12px 16px', fontSize: '0.95rem'
             }}
           />
-          <button 
+          <button
             onClick={handleSend}
-            style={{ 
-              width: 46, height: 46, borderRadius: '23px', background: 'var(--c-primary)', 
-              color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' 
+            style={{
+              width: 46, height: 46, borderRadius: '23px', background: 'var(--c-primary)',
+              color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}
           >
             <Send size={18} style={{ marginLeft: -2 }} />
@@ -1102,7 +1181,7 @@ function NotificationsPage({ onDocClick }) {
               const status = getDocStatus(doc.expiresAt)
               return (
                 <div key={doc.id} className={`doc-card ${status}`} onClick={() => onDocClick(doc)}>
-            <div className={`icon-wrap md warn`}><Clock size={22} /></div>
+                  <div className={`icon-wrap md warn`}><Clock size={22} /></div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="doc-card-title">{doc.title}</div>
                     <div className="doc-card-meta">Expire le : {new Date(doc.expiresAt).toLocaleDateString('fr-FR')}</div>
@@ -1128,7 +1207,7 @@ function AuthGuard() {
   if (profileLoading) return <div style={{ height: '100dvh', background: 'var(--c-bg)' }} />
 
   if (!isAuthenticated) {
-    return authPage === 'login' 
+    return authPage === 'login'
       ? <LoginPage onGoRegister={() => setAuthPage('register')} />
       : <RegisterPage onGoLogin={() => setAuthPage('login')} />
   }

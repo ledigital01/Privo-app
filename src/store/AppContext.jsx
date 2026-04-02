@@ -133,17 +133,56 @@ export const AppProvider = ({ children }) => {
   }, [])
 
   /* ---- DOC ACTIONS ---- */
-  const addDocument = useCallback(async (doc) => {
-    if (!authUser) return
-    const newDoc = { ...doc, user_id: authUser.id }
-    delete newDoc.id // Supabase will generate ID
+  const addDocument = useCallback(async (doc, file) => {
+    if (!authUser) return { error: "Déconnecté" }
+    
+    let fileUrl = null;
+    let filePath = null;
 
+    if (file) {
+      // 1. Generate unique file name
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+      filePath = `${authUser.id}/${fileName}`;
+      
+      // 2. Upload file to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(filePath, file);
+        
+      if (uploadError) {
+        console.error("Erreur d'upload :", uploadError);
+        return { error: "Échec de l'upload du fichier." }
+      }
+      
+      // Optional: Get a public or signed URL if you want immediate display
+      // const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(filePath)
+    }
+
+    const newDoc = { 
+      ...doc, 
+      user_id: authUser.id,
+      file_path: filePath, // Requires updating the table schema
+    }
+    
+    // We do not pass `id` to let Postgres generate it
+    delete newDoc.id 
+
+    // 3. Save to DB
     const { data, error } = await supabase
       .from('documents')
       .insert([newDoc])
       .select()
 
-    if (data) setDocuments(prev => [data[0], ...prev])
+    if (error) {
+      console.error("Erreur bdd :", error);
+      return { error: "Erreur lors de l'enregistrement en BDD." }
+    }
+
+    if (data) {
+      setDocuments(prev => [data[0], ...prev])
+      return { success: true }
+    }
   }, [authUser])
 
   const deleteDocument = useCallback(async (id) => {
