@@ -27,6 +27,22 @@ const ICON_MAP = {
 }
 const getIcon = (name, size) => (ICON_MAP[name] || ICON_MAP.file)(size)
 
+/* --- UTILS: Mapping & Normalisation --- */
+const CATEGORY_MAP = {
+  'passport': 'Identité', 'id_card': 'Identité', 'license': 'Identité',
+  'invoice': 'Finance', 'receipt': 'Finance', 'bank_statement': 'Finance',
+  'contract': 'Contrat', 'employment': 'Contrat',
+  'diploma': 'Santé', 'medical': 'Santé'
+}
+
+const normalizeDate = (dateStr) => {
+  if (!dateStr) return ''
+  // Transforme "DD/MM/YYYY" en "YYYY-MM-DD" pour l'input date
+  const parts = dateStr.match(/(\d{2})[/-](\d{2})[/-](\d{4})/)
+  if (parts) return `${parts[3]}-${parts[2]}-${parts[1]}`
+  return dateStr // Retourne brut si déjà OK ou non reconnu
+}
+
 /* ================================================================
    BOTTOM NAVIGATION
    ================================================================ */
@@ -61,133 +77,7 @@ function BottomNav({ onAddClick }) {
    ================================================================ */
 const CATEGORIES = ['Identité', 'Finance', 'Santé', 'Contrats', 'Études', 'Autre']
 
-function AddDocumentModal({ isOpen, onClose, onScanClick }) {
-  const { addDocument } = useApp()
-  const [step, setStep] = useState('method') // 'method' | 'form'
-  const [form, setForm] = useState({ title: '', type: 'Identité', expiresAt: '', iconName: 'file' })
-  const [error, setError] = useState('')
-  const [file, setFile] = useState(null)
-  const [isUploading, setIsUploading] = useState(false)
-
-  const reset = () => { setStep('method'); setFile(null); setForm({ title: '', type: 'Identité', expiresAt: '', iconName: 'file' }); setError('') }
-  const handleClose = () => { reset(); onClose() }
-
-  // Gestion du choix de fichier manuel
-  const handleFileSelect = (e) => {
-    const selected = e.target.files[0]
-    if (selected) {
-      setFile(selected)
-      setForm(f => ({ ...f, title: selected.name.split('.')[0] })) // Pré-remplit le nom
-      setStep('form')
-    }
-  }
-
-  const handleSubmit = async () => {
-    if (!form.title.trim()) { setError('Le nom du document est requis.'); return }
-    if (!file) { setError('Veuillez sélectionner un fichier.'); return }
-
-    setIsUploading(true)
-    const result = await addDocument({
-      title: form.title.trim(),
-      type: form.type,
-      expiresAt: form.expiresAt || null,
-      iconName: form.iconName,
-    }, file)
-
-    setIsUploading(false)
-    if (result && result.error) {
-      setError(result.error)
-    } else {
-      handleClose()
-    }
-  }
-
-  if (!isOpen) return null
-
-  return (
-    <div className="modal-overlay" onClick={handleClose}>
-      <div className="modal-sheet" onClick={e => e.stopPropagation()}>
-        <div className="modal-handle" />
-
-        {/* ÉTAPE : CHOIX DE MÉTHODE */}
-        {step === 'method' && (
-          <>
-            <div className="modal-header">
-              <h2 className="title-md">Ajouter un document</h2>
-              <button className="modal-close-btn" onClick={handleClose}><X size={18} /></button>
-            </div>
-            <p className="body-sm" style={{ padding: '4px 24px 0' }}>Choisissez une méthode.</p>
-            <div className="modal-body">
-              {/* BOUTON SCAN IA */}
-              <button className="action-row" onClick={() => { onClose(); onScanClick() }}>
-                <div className="icon-wrap md primary"><Camera size={24} /></div>
-                <div style={{ flex: 1 }}>
-                  <div className="action-text">Scan Intelligent (IA)</div>
-                  <div className="action-desc">Capturez une photo, l'IA extrait les données.</div>
-                </div>
-                <ChevronRight size={18} color="var(--c-text-muted)" />
-              </button>
-
-              {/* BOUTON IMPORT MANUEL */}
-              <label className="action-row" style={{ cursor: 'pointer' }}>
-                <div className="icon-wrap md primary"><UploadCloud size={24} /></div>
-                <div style={{ flex: 1 }}>
-                  <div className="action-text">Importer / Saisir</div>
-                  <div className="action-desc">Remplissez les informations manuellement.</div>
-                </div>
-                <ChevronRight size={18} color="var(--c-text-muted)" />
-                <input type="file" hidden onChange={handleFileSelect} />
-              </label>
-            </div>
-          </>
-        )}
-
-        {/* ÉTAPE : FORMULAIRE FINAL */}
-        {step === 'form' && (
-          <>
-            <div className="modal-header">
-              <button className="modal-close-btn" onClick={() => setStep('method')}><ChevronLeft size={18} /></button>
-              <h2 className="title-md">Finaliser l'ajout</h2>
-              <button className="modal-close-btn" onClick={handleClose}><X size={18} /></button>
-            </div>
-            <div className="modal-body">
-              <div>
-                <div className="label-xs" style={{ marginBottom: 8 }}>Nom du document *</div>
-                <input
-                  type="text"
-                  value={form.title}
-                  onChange={e => { setForm(f => ({ ...f, title: e.target.value })); setError('') }}
-                  style={{ width: '100%', padding: '14px 16px', background: 'var(--c-surface-2)', border: '1.5px solid var(--c-border)', borderRadius: 'var(--r-md)' }}
-                />
-                {error && <p style={{ color: 'var(--c-danger)', fontSize: '0.8rem', marginTop: 6 }}>{error}</p>}
-              </div>
-
-              <div>
-                <div className="label-xs" style={{ marginBottom: 8 }}>Catégorie</div>
-                <select
-                  value={form.type}
-                  onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
-                  style={{ width: '100%', padding: '14px 16px', background: 'var(--c-surface-2)', border: '1.5px solid var(--c-border)', borderRadius: 'var(--r-md)' }}
-                >
-                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-
-              <div className="insight-card" style={{ background: 'var(--c-primary-soft)', border: 'none' }}>
-                <FileText size={18} color="var(--c-primary)" />
-                <span className="body-sm" style={{ color: 'var(--c-primary)' }}>Fichier prêt : {file?.name}</span>
-              </div>
-
-              <button className="btn-primary mt-4" onClick={handleSubmit} disabled={isUploading}>
-                {isUploading ? 'Enregistrement sécurisé...' : <><Check size={20} /> Enregistrer dans le coffre</>}
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  )
-}
+/* AddDocumentModal supprimé au profit du Scan IA Premium */
 
 /* ================================================================
    MODAL — EDIT DOCUMENT
@@ -291,21 +181,7 @@ function EditDocumentModal({ isOpen, onClose, doc }) {
   )
 }
 
-/* --- UTILS: Mapping & Normalisation --- */
-const CATEGORY_MAP = {
-  'passport': 'Identité', 'id_card': 'Identité', 'license': 'Identité',
-  'invoice': 'Finance', 'receipt': 'Finance', 'bank_statement': 'Finance',
-  'contract': 'Contrat', 'employment': 'Contrat',
-  'diploma': 'Santé', 'medical': 'Santé' // Adaptable selon tes besoins
-}
 
-const normalizeDate = (dateStr) => {
-  if (!dateStr) return ''
-  // Transforme "DD/MM/YYYY" en "YYYY-MM-DD" pour l'input date
-  const parts = dateStr.match(/(\d{2})[/-](\d{2})[/-](\d{4})/)
-  if (parts) return `${parts[3]}-${parts[2]}-${parts[1]}`
-  return dateStr // Retourne brut si déjà OK ou non reconnu
-}
 
 /* ================================================================
    MODAL — IA SCAN SUPRÊME (Version 2.0 : Robuste & Premium)
@@ -1054,14 +930,14 @@ function AppContent() {
       <div className="app-shell">
         <div className="page-bg-blur" />
         <Routes>
-          <Route path="/" element={<Dashboard onAddClick={() => setModal('ADD')} />} />
+          <Route path="/" element={<Dashboard onAddClick={() => setModal('SCAN')} />} />
           <Route path="/documents" element={<Library onDocClick={handleDocClick} />} />
           <Route path="/detail" element={<DocumentDetail doc={selectedDoc} onBack={() => navigate(-1)} onShare={() => setModal('SHARE')} onDeleteRequest={handleDeleteRequest} onEditRequest={() => setModal('EDIT')} />} />
           <Route path="/notifications" element={<NotificationsPage onDocClick={handleDocClick} />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/subscription" element={<SubscriptionPage onBack={() => navigate(-1)} />} />
         </Routes>
-        <BottomNav onAddClick={() => setModal('ADD')} />
+        <BottomNav onAddClick={() => setModal('SCAN')} />
         <button
           onClick={() => setModal('CHAT')}
           style={{
@@ -1078,7 +954,7 @@ function AppContent() {
 
       </div>
 
-      <AddDocumentModal isOpen={modal === 'ADD'} onClose={() => setModal(null)} onScanClick={handleScanClick} />
+      {/* AddDocumentModal supprimé */}
       <EditDocumentModal isOpen={modal === 'EDIT'} onClose={() => setModal(null)} doc={selectedDoc} />
       <IAScanModal isOpen={modal === 'SCAN'} onClose={() => setModal(null)} />
       <QuickShareModal isOpen={modal === 'SHARE'} onClose={() => setModal(null)} />
