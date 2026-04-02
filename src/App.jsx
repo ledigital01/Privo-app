@@ -214,24 +214,39 @@ function IAScanModal({ isOpen, onClose }) {
       // UNIQUE UPLOAD START
       const path = `${authUser.id}/ai_scan_${Date.now()}.${selectedFile.name.split('.').pop()}`
       setFilePath(path)
-      await supabase.storage.from('documents').upload(path, selectedFile)
+      console.log("[SCAN] Upload vers Storage...", path)
+      const { error: uploadError } = await supabase.storage.from('documents').upload(path, selectedFile)
+      if (uploadError) throw new Error(`Erreur Upload: ${uploadError.message}`)
 
-      const { data } = await supabase.functions.invoke('process_document', { body: { filePath: path, userId: authUser.id } })
+      console.log("[SCAN] Appel IA (Llama)...")
+      // Tentative d'appel à la fonction Edge
+      const { data, error: functionError } = await supabase.functions.invoke('process_document', { 
+        body: { filePath: path, userId: authUser.id } 
+      })
+
+      if (functionError) {
+        console.error("[SCAN] Erreur Supabase Function:", functionError)
+        throw new Error(`Erreur IA : ${functionError.message || 'La fonction ne répond pas'}`)
+      }
 
       if (data && data.result) {
+        console.log("[SCAN] Résultat IA reçu:", data.result)
         const res = data.result
         setFormData({
-          title: res.extracted_data?.Nom || res.detected_type || '',
+          title: res.extracted_data?.Nom || res.detected_type || 'Nouveau Document',
           category: CATEGORY_MAP[res.detected_type?.toLowerCase()] || 'Autre',
           expiresAt: normalizeDate(res.extracted_data?.Expiration),
           issuer: res.extracted_data?.Emetteur || '',
           tags: res.suggested_tags || []
         })
         setStep('review')
+      } else {
+        throw new Error("L'IA n'a pas pu extraire de données.")
       }
     } catch (error) {
-      console.error("Erreur IA:", error)
-      setStep('review') // On passe en manuel si l'IA échoue
+      console.error("[SCAN] Erreur critique:", error)
+      alert(`Oups ! Quelque chose coince : ${error.message}`) // Feedback direct sur l'écran
+      setStep('review') // On passe en manuel en cas d'erreur pour ne pas bloquer l'utilisateur
     }
   }
 
