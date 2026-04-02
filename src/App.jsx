@@ -291,20 +291,21 @@ function EditDocumentModal({ isOpen, onClose, doc }) {
   )
 }
 
-
 /* ================================================================
-   MODAL — IA SCAN (Version Réelle avec Groq & Supabase)
+   MODAL — IA SCAN (Version Premium : Camera + Aperçu + Fix)
    ================================================================ */
 function IAScanModal({ isOpen, onClose }) {
   const { authUser, addDocument } = useApp()
   const [step, setStep] = useState('upload') // 'upload' | 'processing' | 'result' | 'done'
   const [file, setFile] = useState(null)
+  const [previewUrl, setPreviewUrl] = useState(null)
   const [aiData, setAiData] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
 
   const reset = () => {
     setStep('upload')
     setFile(null)
+    setPreviewUrl(null)
     setAiData(null)
     setIsSaving(false)
   }
@@ -314,61 +315,60 @@ function IAScanModal({ isOpen, onClose }) {
     onClose()
   }
 
-  // --- ÉTAPE 1 : Sélection et envoi au Cerveau IA ---
   const handleFileChange = async (e) => {
     const selectedFile = e.target.files[0]
     if (!selectedFile) return
 
+    // Créer un aperçu visuel immédiat
+    const url = URL.createObjectURL(selectedFile)
+    setPreviewUrl(url)
     setFile(selectedFile)
     setStep('processing')
 
     try {
-      // 1. Upload temporaire pour l'IA
+      // 1. Upload vers Supabase (C'est obligatoire pour que l'IA y accède)
       const fileExt = selectedFile.name.split('.').pop()
       const fileName = `ai_scan_${Date.now()}.${fileExt}`
       const filePath = `${authUser.id}/${fileName}`
 
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('documents')
         .upload(filePath, selectedFile)
 
-      if (uploadError) throw uploadError
+      if (uploadError) throw new Error("Échec de l'upload temporaire.")
 
-      // 2. Appel de la fonction Edge "process_document"
+      // 2. Appel de la fonction IA
       const { data, error: funcError } = await supabase.functions.invoke('process_document', {
-        body: { documentId: null, filePath: filePath, userId: authUser.id }
+        body: { filePath: filePath, userId: authUser.id }
       })
 
-      if (funcError) throw funcError
+      if (funcError || !data) {
+        // En cas d'erreur IA, on essaie au moins de récupérer le doc
+        throw new Error("L'IA n'a pas pu analyser ce document. Essayez l'ajout manuel.")
+      }
 
-      // 3. Récupération des données extraites par Groq
-      setAiData({
-        ...data.result,
-        filePath: filePath // On garde le lien du fichier
-      })
+      setAiData({ ...data.result, filePath })
       setStep('result')
 
     } catch (error) {
       alert("Erreur IA : " + error.message)
       setStep('upload')
+      setPreviewUrl(null)
     }
   }
 
-  // --- ÉTAPE 2 : Confirmation finale dans le coffre ---
   const handleConfirm = async () => {
     setIsSaving(true)
     try {
       await addDocument({
-        title: aiData.extracted_data?.Nom || aiData.detected_type,
-        type: aiData.detected_type,
+        title: aiData.extracted_data?.Nom || aiData.detected_type || "Document IA",
+        type: aiData.detected_type || "Autre",
         expiresAt: aiData.extracted_data?.Expiration || null,
         iconName: aiData.detected_type === 'Identité' ? 'user' : 'file',
-      }, file) // On réutilise le fichier déjà sélectionné
+      }, file)
 
       setStep('done')
-      setTimeout(() => {
-        handleClose()
-      }, 2000)
+      setTimeout(handleClose, 2000)
     } catch (e) {
       alert("Erreur lors de l'enregistrement.")
     } finally {
@@ -380,90 +380,95 @@ function IAScanModal({ isOpen, onClose }) {
 
   return (
     <div className="modal-overlay" onClick={handleClose}>
-      <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+      <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: '90vh' }}>
         <div className="modal-handle" />
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Zap size={20} color="var(--c-primary)" />
-            <h2 className="title-md">{step === 'result' ? 'Analyse terminée' : 'Scan Intelligent IA'}</h2>
+            <h2 className="title-md">{step === 'processing' ? 'Scan en cours...' : 'Scan Intelligent'}</h2>
           </div>
           <button className="modal-close-btn" onClick={handleClose}><X size={18} /></button>
         </div>
 
-        <div className="modal-body">
-          {/* ETAPE : UPLOAD */}
+        <div className="modal-body no-scrollbar" style={{ overflowY: 'auto' }}>
+
+          {/* ÉTAPE : CHOIX MÉTHODE (CAMERA vs DOSSIER) */}
           {step === 'upload' && (
             <div style={{ textAlign: 'center', padding: '20px 0' }}>
               <div className="icon-wrap lg primary" style={{ margin: '0 auto 20px' }}><Camera size={32} /></div>
-              <p className="title-sm">Prenez une photo du document</p>
-              <p className="body-sm" style={{ marginBottom: 24, marginTop: 8 }}>L'IA de Privo va extraire les dates, noms et catégories automatiquement.</p>
+              <p className="title-sm">Sécurisez un nouveau document</p>
+              <p className="body-sm" style={{ marginBottom: 30, marginTop: 8 }}>Utilisez votre appareil photo pour un classement automatique.</p>
 
-              <label className="btn-primary" style={{ cursor: 'pointer', display: 'inline-flex' }}>
-                <UploadCloud size={20} /> Sélectionner / Photographier
-                <input type="file" hidden accept="image/*" onChange={handleFileChange} />
-              </label>
-            </div>
-          )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {/* BOUTON PHOTOGRAPHIER (Camera direct sur mobile) */}
+                <label className="btn-primary" style={{ cursor: 'pointer', display: 'flex', gap: 10, justifyContent: 'center' }}>
+                  <Camera size={20} /> Prendre une photo
+                  <input type="file" hidden accept="image/*" capture="environment" onChange={handleFileChange} />
+                </label>
 
-          {/* ETAPE : CHARGEMENT IA */}
-          {step === 'processing' && (
-            <div style={{ textAlign: 'center', padding: '40px 0' }}>
-              <div className="doc-preview" style={{ marginBottom: 20 }}>
-                <div className="scan-line" />
-                <div className="icon-wrap lg primary"><Zap size={30} className="pulse" /></div>
+                {/* BOUTON CHOISIR DOSSIER */}
+                <label className="btn-secondary" style={{ cursor: 'pointer', display: 'flex', gap: 10, justifyContent: 'center' }}>
+                  <UploadCloud size={20} /> Importer un fichier
+                  <input type="file" hidden accept="image/*,application/pdf" onChange={handleFileChange} />
+                </label>
               </div>
-              <p className="title-sm">L'IA de Privo analyse...</p>
-              <p className="body-sm" style={{ marginTop: 8 }}>Extraction des informations en cours avec Groq Llama 3.2.</p>
             </div>
           )}
 
-          {/* ETAPE : RESULTAT */}
+          {/* ÉTAPE : SCANNING AVEC APERÇU RÉEL */}
+          {step === 'processing' && (
+            <div style={{ textAlign: 'center', padding: '10px 0' }}>
+              <div style={{ position: 'relative', width: '100%', height: 260, background: '#000', borderRadius: 'var(--r-xl)', overflow: 'hidden', marginBottom: 20 }}>
+                {previewUrl && <img src={previewUrl} alt="Scan preview" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.7 }} />}
+                <div className="scan-line-active" /> {/* Classe CSS à ajouter dans index.css */}
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Zap size={48} color="white" className="pulse-fast" />
+                </div>
+              </div>
+              <p className="title-sm">L'IA déchiffre le document...</p>
+              <p className="body-sm" style={{ marginTop: 8 }}>Extraction sécurisée des données confidentielles.</p>
+            </div>
+          )}
+
+          {/* ÉTAPE : RÉSULTAT IA */}
           {step === 'result' && aiData && (
             <>
-              <div className="insight-card" style={{ background: 'var(--c-success-soft)', border: 'none', marginBottom: 16 }}>
-                <ShieldCheck size={20} color="var(--c-success)" />
-                <p className="body-sm" style={{ color: 'var(--c-success)', fontWeight: 600 }}>Structure détectée avec succès !</p>
+              <div style={{ width: '100%', height: 140, borderRadius: 'var(--r-lg)', overflow: 'hidden', marginBottom: 16, border: '2px solid var(--c-border)' }}>
+                {previewUrl && <img src={previewUrl} alt="Aperçu" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
               </div>
-
-              <div className="label-xs" style={{ marginBottom: 8 }}>Données extraites par l'IA</div>
+              <div className="label-xs" style={{ marginBottom: 12 }}>Analyse de l'agent IA Privo</div>
               <div className="space-y-3">
                 <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px' }}>
                   <FileText size={18} color="var(--c-primary)" />
-                  <div>
-                    <div className="label-xs">Type de document</div>
+                  <div style={{ flex: 1 }}>
+                    <div className="label-xs">Catégorie détectée</div>
                     <div className="title-sm">{aiData.detected_type}</div>
                   </div>
-                </div>
-                <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px' }}>
-                  <User size={18} color="var(--c-primary)" />
-                  <div>
-                    <div className="label-xs">Détails détectés</div>
-                    <div className="title-sm">{aiData.extracted_data?.Nom || 'Non spécifié'}</div>
-                  </div>
+                  <div className="badge success">{Math.round(aiData.confidence_score * 100)}%</div>
                 </div>
                 <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px' }}>
                   <Calendar size={18} color="var(--c-warn)" />
                   <div>
-                    <div className="label-xs">Date d'expiration</div>
-                    <div className="title-sm">{aiData.extracted_data?.Expiration || 'Non détectée'}</div>
+                    <div className="label-xs">Expiration calculée</div>
+                    <div className="title-sm">{aiData.extracted_data?.Expiration || 'À saisir manuellement'}</div>
                   </div>
                 </div>
               </div>
 
               <button className="btn-primary mt-6" onClick={handleConfirm} disabled={isSaving}>
-                {isSaving ? 'Enregistrement...' : <><Check size={20} /> Confirmer et Ranger</>}
+                {isSaving ? 'Sécurisation...' : <><Check size={20} /> Valider l'enregistrement</>}
               </button>
             </>
           )}
 
-          {/* ETAPE : FINI */}
+          {/* ÉTAPE : TERMINÉ */}
           {step === 'done' && (
             <div style={{ textAlign: 'center', padding: '40px 0' }}>
-              <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--c-success-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                <Check size={36} color="var(--c-success)" />
+              <div className="avatar" style={{ margin: '0 auto 20px', background: 'var(--c-success-soft)', color: 'var(--c-success)', width: 64, height: 64 }}>
+                <Check size={32} />
               </div>
-              <p className="title-sm">C'est dans le coffre !</p>
-              <p className="body-sm" style={{ marginTop: 8 }}>Votre document a été classé et sécurisé.</p>
+              <p className="title-sm">Archivé avec succès !</p>
+              <p className="body-sm" style={{ marginTop: 8 }}>Vérifiez vos rappels pour ce document.</p>
             </div>
           )}
         </div>
@@ -471,7 +476,6 @@ function IAScanModal({ isOpen, onClose }) {
     </div>
   )
 }
-
 
 /* ================================================================
    MODAL — DELETE CONFIRMATION
