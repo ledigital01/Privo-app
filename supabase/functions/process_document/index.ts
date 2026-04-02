@@ -47,80 +47,59 @@ serve(async (req) => {
     const mimeType = fileData.type || 'image/jpeg'
     const base64Url = `data:${mimeType};base64,${base64Str}`
 
-    // 4. Appel à l'API Groq (Correction : stratégie multi-modèles pour éviter le crash "decommissioned")
-    const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY')
-    if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY n'est pas configuré.")
+    // 4. Appel à l'API Google Gemini 2.0 Flash (Beaucoup plus stable et rapide)
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY')
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY n'est pas configuré dans Supabase.")
 
-    console.log(`[INFO] Appel API Groq avec stratégie de secours...`)
+    console.log(`[INFO] Appel API Google Gemini 2.0 Flash...`)
+    
+    // Le prompt pour Gemini
     const promptText = `
-      Analyse ce document.
-      Extrais exactement cet objet JSON :
+      Analyse ce document (scan CNI, Passeport, Facture, Certificat, etc.).
+      Extrais les informations et réponds UNIQUEMENT avec cet objet JSON :
       {
         "detected_type": "Passport / ID_Card / Invoice / Receipt / License / Diploma / Other",
         "extracted_data": {
-           "Nom": "Nom complet si lisible",
+           "Nom": "Nom complet si présent",
            "Expiration": "DD/MM/YYYY si présente",
-           "Emetteur": "Source du document"
+           "Emetteur": "Source ou autorité du document"
         },
         "suggested_tags": ["tag1", "tag2"]
       }
     `
 
-    // Liste des modèles à tenter par ordre de préférence (du plus rapide au plus stable)
-    const models = [
-      'llama-3.2-11b-vision-preview', 
-      'llama-3.2-90b-vision-preview',
-      'llama-3.2-11b-vision',
-      'llama-3.2-90b-vision'
-    ]
-    let groqResponse
-    let lastError = ""
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`
 
-    for (const model of models) {
-      console.log(`[INFO] Tentative avec le modèle : ${model}`)
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${GROQ_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: model,
-          messages: [
-            {
-              role: 'user',
-              content: [
-                { type: 'text', text: promptText },
-                { type: 'image_url', image_url: { url: base64Url } }
-              ]
-            }
-          ],
-          temperature: 0.1,
-          response_format: { type: "json_object" }
-        })
+    const geminiResponse = await fetch(geminiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            { text: promptText },
+            { inlineData: { mimeType: mimeType, data: base64Str } }
+          ]
+        }],
+        generationConfig: {
+          response_mime_type: "application/json"
+        }
       })
+    })
 
-      if (response.ok) {
-        groqResponse = response
-        console.log(`[SUCCESS] Modèle ${model} a fonctionné !`)
-        break
-      } else {
-        const errorText = await response.text()
-        lastError = errorText
-        console.warn(`[WARN] Échec avec ${model}: ${errorText}`)
-      }
+    if (!geminiResponse.ok) {
+      const errorText = await geminiResponse.text()
+      console.error("[ERROR] Gemini API Error:", errorText)
+      throw new Error(`Erreur Gemini: ${errorText}`)
     }
 
-    if (!groqResponse) {
-      console.error("[CRITICAL] Tous les modèles Groq ont échoué.")
-      throw new Error(`Groq API (Tous les modèles ont échoué) : ${lastError}`)
-    }
+    const aiData = await geminiResponse.json()
+    // Extraction du JSON depuis la réponse Gemini
+    const rawContent = aiData.candidates?.[0]?.content?.parts?.[0]?.text
+    if (!rawContent) throw new Error("L'IA n'a pas renvoyé de contenu.")
 
-    const aiData = await groqResponse.json()
-    const aiResult = JSON.parse(aiData.choices[0].message.content)
-    console.log(`[SUCCESS] Analyse terminée:`, aiResult)
+    const aiResult = JSON.parse(rawContent)
+    console.log(`[SUCCESS] Analyse Gemini terminée:`, aiResult)
 
-    // 5. Retourner le succès directement
     return new Response(JSON.stringify({ success: true, result: aiResult }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
