@@ -47,11 +47,11 @@ serve(async (req) => {
     const mimeType = fileData.type || 'image/jpeg'
     const base64Url = `data:${mimeType};base64,${base64Str}`
 
-    // 4. Appel à l'API Groq (Correction : modèle supporté)
+    // 4. Appel à l'API Groq (Correction : stratégie multi-modèles pour éviter le crash "decommissioned")
     const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY')
     if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY n'est pas configuré.")
 
-    console.log(`[INFO] Appel API Groq (Llama 3.2 90B Vision)...`)
+    console.log(`[INFO] Appel API Groq avec stratégie de secours...`)
     const promptText = `
       Analyse ce document.
       Extrais exactement cet objet JSON :
@@ -66,32 +66,54 @@ serve(async (req) => {
       }
     `
 
-    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${GROQ_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'llama-3.2-90b-vision-preview', // Passage au modèle 90B qui est plus stable
-        messages: [
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: promptText },
-              { type: 'image_url', image_url: { url: base64Url } }
-            ]
-          }
-        ],
-        temperature: 0.1,
-        response_format: { type: "json_object" }
-      })
-    })
+    // Liste des modèles à tenter par ordre de préférence (du plus rapide au plus stable)
+    const models = [
+      'llama-3.2-11b-vision-preview', 
+      'llama-3.2-90b-vision-preview',
+      'llama-3.2-11b-vision',
+      'llama-3.2-90b-vision'
+    ]
+    let groqResponse
+    let lastError = ""
 
-    if (!groqResponse.ok) {
-      const errorText = await groqResponse.text()
-      console.error("[ERROR] Groq API Response Error:", errorText)
-      throw new Error(`API Groq: ${errorText}`)
+    for (const model of models) {
+      console.log(`[INFO] Tentative avec le modèle : ${model}`)
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${GROQ_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: promptText },
+                { type: 'image_url', image_url: { url: base64Url } }
+              ]
+            }
+          ],
+          temperature: 0.1,
+          response_format: { type: "json_object" }
+        })
+      })
+
+      if (response.ok) {
+        groqResponse = response
+        console.log(`[SUCCESS] Modèle ${model} a fonctionné !`)
+        break
+      } else {
+        const errorText = await response.text()
+        lastError = errorText
+        console.warn(`[WARN] Échec avec ${model}: ${errorText}`)
+      }
+    }
+
+    if (!groqResponse) {
+      console.error("[CRITICAL] Tous les modèles Groq ont échoué.")
+      throw new Error(`Groq API (Tous les modèles ont échoué) : ${lastError}`)
     }
 
     const aiData = await groqResponse.json()
