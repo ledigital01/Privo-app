@@ -14,7 +14,7 @@ serve(async (req) => {
 
   try {
     // 1. Initialiser le client
-    const { documentId, filePath, userId } = await req.json()
+    const { filePath, userId } = await req.json()
     console.log(`[START] Traitement du document: ${filePath} pour l'user: ${userId}`)
 
     const supabaseClient = createClient(
@@ -47,13 +47,13 @@ serve(async (req) => {
     const mimeType = fileData.type || 'image/jpeg'
     const base64Url = `data:${mimeType};base64,${base64Str}`
 
-    // 4. Appel à l'API Groq
+    // 4. Appel à l'API Groq (Correction : modèle supporté)
     const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY')
     if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY n'est pas configuré.")
 
-    console.log(`[INFO] Appel API Groq (Llama Vision)...`)
+    console.log(`[INFO] Appel API Groq (Llama 3.2 90B Vision)...`)
     const promptText = `
-      Analyse ce document (scan CNI, Passeport, Facture, etc.).
+      Analyse ce document.
       Extrais exactement cet objet JSON :
       {
         "detected_type": "Passport / ID_Card / Invoice / Receipt / License / Diploma / Other",
@@ -73,7 +73,7 @@ serve(async (req) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'llama-3.2-11b-vision-preview', // Passage au modèle 11b pour plus de rapidité
+        model: 'llama-3.2-90b-vision-preview', // Passage au modèle 90B qui est plus stable
         messages: [
           {
             role: 'user',
@@ -98,21 +98,7 @@ serve(async (req) => {
     const aiResult = JSON.parse(aiData.choices[0].message.content)
     console.log(`[SUCCESS] Analyse terminée:`, aiResult)
 
-    // 5. Sauvegarder les résultats dans notre base de données "document_ai_analysis"
-    const { error: insertError } = await supabaseClient
-      .from('document_ai_analysis')
-      .upsert({
-        document_id: documentId,
-        user_id: userId,
-        detected_type: aiResult.detected_type,
-        extracted_data: aiResult.extracted_data,
-        processing_status: 'completed',
-        processed_at: new Date().toISOString()
-      }, { onConflict: 'document_id' })
-
-    if (insertError) throw insertError
-
-    // 6. Retourner le succès
+    // 5. Retourner le succès directement
     return new Response(JSON.stringify({ success: true, result: aiResult }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
