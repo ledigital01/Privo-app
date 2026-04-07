@@ -113,9 +113,22 @@ serve(async (req) => {
     }
 
     const aiData = await claudeResponse.json()
-    // Extraction du JSON depuis la réponse Claude
     const rawContent = aiData.content[0].text
-    const aiResult = JSON.parse(rawContent)
+
+    // Logique de parsing robuste (Nettoyage Markdown + Regex JSON)
+    let aiResult;
+    try {
+      const cleaned = rawContent.replace(/```json/g, "").replace(/```/g, "").trim();
+      aiResult = JSON.parse(cleaned);
+    } catch (e) {
+      const match = rawContent.match(/\{[\s\S]*\}/);
+      if (match) {
+        aiResult = JSON.parse(match[0]);
+      } else {
+        throw new Error("Impossible de décoder la réponse JSON de Claude");
+      }
+    }
+
     console.log(`[SUCCESS] Analyse Claude terminée:`, aiResult)
 
     return new Response(JSON.stringify({ success: true, result: aiResult }), {
