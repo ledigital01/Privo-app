@@ -16,10 +16,26 @@ export default function LoginPage({ onGoRegister }) {
       setError('Veuillez remplir tous les champs.')
       return
     }
+    
+    console.log("[DEBUG] Tentative de connexion pour:", form.email.trim())
     setLoading(true)
-    const result = await login(form.email.trim(), form.password)
-    setLoading(false)
-    if (!result.success) setError(result.error)
+    
+    try {
+      const result = await login(form.email.trim(), form.password)
+      console.log("[DEBUG] Résultat reçu:", result)
+      setLoading(false)
+
+      if (result.success) {
+        console.log("[DEBUG] Connexion réussie !")
+      } else {
+        console.error("[DEBUG] Échec de connexion:", result.error)
+        setError(result.error || "Une erreur inconnue est survenue.")
+      }
+    } catch (err) {
+      console.error("[DEBUG] Erreur critique pendant le login:", err)
+      setLoading(false)
+      setError("Erreur fatale : " + err.message)
+    }
   }
 
   return (
