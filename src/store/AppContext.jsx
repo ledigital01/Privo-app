@@ -131,11 +131,35 @@ export const AppProvider = ({ children }) => {
     }
   }
 
-  // 4. Supprimer un document
-  const deleteDocument = async (id) => {
-    const { error } = await supabase.from('documents').delete().eq('id', id)
-    if (!error) {
-      setDocuments(prev => prev.filter(d => d.id !== id))
+  // 3. Authentification (Login / Register)
+  const login = async (email, password) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) throw error
+      return { success: true, user: data.user }
+    } catch (err) {
+      console.error("Erreur login:", err)
+      return { success: false, error: err.message }
+    }
+  }
+
+  const register = async (email, password, firstName, lastName) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+          }
+        }
+      })
+      if (error) throw error
+      return { success: true, user: data.user }
+    } catch (err) {
+      console.error("Erreur register:", err)
+      return { success: false, error: err.message }
     }
   }
 
@@ -143,6 +167,14 @@ export const AppProvider = ({ children }) => {
     await supabase.auth.signOut()
     setAuthUser(null)
     setDocuments([])
+  }
+
+  // 4. Supprimer un document
+  const deleteDocument = async (id) => {
+    const { error } = await supabase.from('documents').delete().eq('id', id)
+    if (!error) {
+      setDocuments(prev => prev.filter(d => d.id !== id))
+    }
   }
 
   // Stats calculées
@@ -167,7 +199,8 @@ export const AppProvider = ({ children }) => {
 
   const value = {
     authUser, documents, loading, stats, expiringDocs, searchQuery, filteredDocuments,
-    setSearchQuery, addDocument, deleteDocument, logout, isAuthenticated: !!authUser
+    setSearchQuery, addDocument, deleteDocument, logout, login, register, 
+    isAuthenticated: !!authUser
   }
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
