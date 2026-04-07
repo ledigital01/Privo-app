@@ -47,74 +47,67 @@ serve(async (req) => {
     const mimeType = fileData.type || 'image/jpeg'
     const base64Url = `data:${mimeType};base64,${base64Str}`
 
-    // 4. Appel à l'API Google Gemini avec secours (Fallback)
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY')
-    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY n'est pas configuré dans Supabase.")
+    // 4. Appel à l'API Anthropic Claude 3.5 Sonnet (Le plus précis pour la vision)
+    const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')
+    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY n'est pas configuré dans Supabase.")
 
-    console.log(`[INFO] Appel API Google Gemini avec stratégie de secours...`)
+    console.log(`[INFO] Appel API Anthropic Claude 3.5 Sonnet...`)
     
     const promptText = `
       Analyse ce document (scan CNI, Passeport, Facture, Certificat, etc.).
-      Extrais les informations et réponds UNIQUEMENT avec cet objet JSON :
+      Extrais les informations de manière ultra-précise et réponds UNIQUEMENT avec cet objet JSON :
       {
         "detected_type": "Passport / ID_Card / Invoice / Receipt / License / Diploma / Other",
         "extracted_data": {
-           "Nom": "Nom complet si présent",
+           "Nom": "Nom complet exactement tel qu'il apparaît",
            "Expiration": "DD/MM/YYYY si présente",
-           "Emetteur": "Source ou autorité du document"
+           "Emetteur": "Autorité ou source du document"
         },
         "suggested_tags": ["tag1", "tag2"]
       }
     `
 
-    const models = ['gemini-2.0-flash', 'gemini-1.5-flash']
-    let geminiResponse
-    let lastError = ""
-
-    for (const model of models) {
-      console.log(`[INFO] Tentative avec Gemini : ${model}`)
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`
-      
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: promptText },
-              { inlineData: { mimeType: mimeType, data: base64Str } }
-            ]
-          }],
-          generationConfig: {
-            response_mime_type: "application/json"
-          }
-        })
+    const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: "claude-3-5-haiku-20241022",
+        max_tokens: 1024,
+        messages: [{
+          role: "user",
+          content: [
+            {
+              type: "image",
+              source: {
+                type: "base64",
+                media_type: mimeType,
+                data: base64Str
+              }
+            },
+            {
+              type: "text",
+              text: promptText
+            }
+          ]
+        }]
       })
+    })
 
-      if (response.ok) {
-        geminiResponse = response
-        console.log(`[SUCCESS] Modèle ${model} a fonctionné !`)
-        break
-      } else {
-        const err = await response.text()
-        lastError = err
-        console.warn(`[WARN] Échec avec ${model}: ${err}`)
-        // Si c'est un quota (429), on continue vers le modèle suivant
-        if (response.status !== 429) break 
-      }
+    if (!claudeResponse.ok) {
+      const errorText = await claudeResponse.text()
+      console.error("[ERROR] Claude API Error:", errorText)
+      throw new Error(`Erreur Claude: ${errorText}`)
     }
 
-    if (!geminiResponse) {
-      throw new Error(`Toutes les tentatives Gemini ont échoué : ${lastError}`)
-    }
-
-    const aiData = await geminiResponse.json()
-    // Extraction du JSON depuis la réponse Gemini
-    const rawContent = aiData.candidates?.[0]?.content?.parts?.[0]?.text
-    if (!rawContent) throw new Error("L'IA n'a pas renvoyé de contenu.")
-
+    const aiData = await claudeResponse.json()
+    // Extraction du JSON depuis la réponse Claude
+    const rawContent = aiData.content[0].text
     const aiResult = JSON.parse(rawContent)
-    console.log(`[SUCCESS] Analyse Gemini terminée:`, aiResult)
+    console.log(`[SUCCESS] Analyse Claude terminée:`, aiResult)
 
     return new Response(JSON.stringify({ success: true, result: aiResult }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
