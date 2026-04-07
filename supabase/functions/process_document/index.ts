@@ -75,13 +75,13 @@ serve(async (req) => {
         'content-type': 'application/json'
       },
       body: JSON.stringify({
-        model: "claude-3-5-sonnet-20241022",
+        model: "claude-3-5-sonnet-latest",
         max_tokens: 1024,
         messages: [{
           role: "user",
           content: [
             {
-              type: "image",
+              type: mimeType === "application/pdf" ? "document" : "image",
               source: {
                 type: "base64",
                 media_type: mimeType,
@@ -90,7 +90,16 @@ serve(async (req) => {
             },
             {
               type: "text",
-              text: promptText
+              text: `Analyse ce document et réponds UNIQUEMENT en JSON valide :
+{
+  "nom_document": "à détecter",
+  "categorie": "pièce d'identité | passeport | reçu | facture | contrat | autre",
+  "date_expiration": "JJ/MM/AAAA ou null",
+  "date_emission": "JJ/MM/AAAA ou null",
+  "titulaire": "nom complet ou null",
+  "informations_importantes": ["info1", "info2"],
+  "resume": "courte description"
+}`
             }
           ]
         }]
