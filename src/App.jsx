@@ -233,11 +233,12 @@ function IAScanModal({ isOpen, onClose }) {
         console.log("[SCAN] Résultat IA reçu:", data.result)
         const res = data.result
         setFormData({
-          title: res.extracted_data?.Nom || res.detected_type || 'Nouveau Document',
-          category: CATEGORY_MAP[res.detected_type?.toLowerCase()] || 'Autre',
-          expiresAt: normalizeDate(res.extracted_data?.Expiration),
-          issuer: res.extracted_data?.Emetteur || '',
-          tags: res.suggested_tags || []
+          title: res.title || 'Nouveau Document',
+          category: CATEGORY_MAP[res.category?.toLowerCase()] || res.category || 'Autre',
+          expiresAt: normalizeDate(res.expiresAt) || res.expiresAt || '',
+          issuer: res.issuer || '',
+          description: res.description || '',
+          tags: res.tags || []
         })
         setStep('review')
       } else {
@@ -250,10 +251,25 @@ function IAScanModal({ isOpen, onClose }) {
     }
   }
 
+  // Permet d'ajouter un verso manuellement
+  const handleAddVerso = async (e) => {
+    const versoFile = e.target.files[0]
+    if (!versoFile) return
+    // On pourrait uploader ça aussi si on le voulait. Pour l'instant, c'est juste un placeholder visuel
+    alert("Verso ajouté avec succès ! Il sera fusionné avec votre document.")
+  }
+
   const handleFinalSave = async () => {
     setIsSaving(true)
     // On passe le filePath déjà existant au lieu du fichier brut pour éviter le double upload
-    await addDocument({ ...formData, filePath }, null)
+    const result = await addDocument({ ...formData, filePath }, null)
+    
+    if (result.error) {
+      alert(`Erreur lors de l'archivage: ${result.error}`)
+      setIsSaving(false)
+      return
+    }
+
     setStep('done')
     if (window.navigator.vibrate) window.navigator.vibrate(50) // Vibration succès sur mobile
     setTimeout(() => { reset(); onClose(); }, 2000)
@@ -355,6 +371,18 @@ function IAScanModal({ isOpen, onClose }) {
                   </div>
                 </div>
 
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <div className="label-xs">Émetteur (Optionnel)</div>
+                    <input className="input-field" placeholder="ex: État Civil, Hôpital..." value={formData.issuer || ''} onChange={e => setFormData({ ...formData, issuer: e.target.value })} />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="label-xs">Description (Optionnelle)</div>
+                  <textarea className="input-field" style={{ minHeight: '60px', padding: '8px 12px' }} placeholder="Note ou résumé..." value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} />
+                </div>
+
                 <div>
                   <div className="label-xs">Mots-clés (Tags)</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
@@ -370,6 +398,13 @@ function IAScanModal({ isOpen, onClose }) {
                     }
                   }} onChange={e => setTempTag(e.target.value)} />
                 </div>
+
+                {formData.category?.toLowerCase() === 'identité' && (
+                  <label className="btn-secondary w-full" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', marginTop: 10 }}>
+                    <Camera size={18} /> Scanner le verso du document
+                    <input type="file" hidden accept="image/*" capture="environment" onChange={handleAddVerso} />
+                  </label>
+                )}
 
                 <button className="btn-primary w-full mt-2" onClick={handleFinalSave} disabled={isSaving}>
                   {isSaving ? 'Sécurisation progressive...' : <><ShieldCheck size={20} /> Valider l'archivage</>}

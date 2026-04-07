@@ -94,16 +94,18 @@ export const AppProvider = ({ children }) => {
       }
 
       // Insertion en BDD
+      const insertPayload = {
+        user_id: authUser.id,
+        title: docData.title,
+        type: docData.category || docData.type || 'Autre',
+        expires_at: docData.expiresAt || null,
+        icon_name: docData.iconName || 'file',
+        file_path: filePath
+      }
+      
       const { data, error } = await supabase
         .from('documents')
-        .insert([{
-          user_id: authUser.id,
-          title: docData.title,
-          type: docData.type,
-          expires_at: docData.expiresAt,
-          icon_name: docData.iconName,
-          file_path: filePath
-        }])
+        .insert([insertPayload])
         .select()
 
       if (error) throw error

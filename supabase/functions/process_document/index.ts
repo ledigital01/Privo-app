@@ -54,16 +54,15 @@ serve(async (req) => {
     console.log(`[INFO] Appel API Anthropic Claude 3.5 Sonnet...`)
     
     const promptText = `
-      Analyse ce document (scan CNI, Passeport, Facture, Certificat, etc.).
-      Extrais les informations de manière ultra-précise et réponds UNIQUEMENT avec cet objet JSON :
+      Analyse ce document de manière ultra-précise.
+      Réponds UNIQUEMENT avec cet objet JSON valide :
       {
-        "detected_type": "Passport / ID_Card / Invoice / Receipt / License / Diploma / Other",
-        "extracted_data": {
-           "Nom": "Nom complet exactement tel qu'il apparaît",
-           "Expiration": "DD/MM/YYYY si présente",
-           "Emetteur": "Autorité ou source du document"
-        },
-        "suggested_tags": ["tag1", "tag2"]
+        "title": "Nom complet ou titre du document (ex: Carte Nationale d'Identité, Facture EDF...)",
+        "category": "Identité | Finance | Santé | Contrat | Autre",
+        "expiresAt": "YYYY-MM-DD ou null si pas d'expiration",
+        "issuer": "L'émetteur ou l'autorité (ex: État, Nom de l'entreprise, Hôpital) ou null",
+        "description": "Un court résumé utile ou null",
+        "tags": ["mot-clé 1", "mot-clé 2"]
       }
     `
 
@@ -90,16 +89,7 @@ serve(async (req) => {
             },
             {
               type: "text",
-              text: `Analyse ce document et réponds UNIQUEMENT en JSON valide :
-{
-  "nom_document": "à détecter",
-  "categorie": "pièce d'identité | passeport | reçu | facture | contrat | autre",
-  "date_expiration": "JJ/MM/AAAA ou null",
-  "date_emission": "JJ/MM/AAAA ou null",
-  "titulaire": "nom complet ou null",
-  "informations_importantes": ["info1", "info2"],
-  "resume": "courte description"
-}`
+              text: promptText
             }
           ]
         }]
