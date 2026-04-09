@@ -1025,11 +1025,32 @@ function AIChatModal({ isOpen, onClose }) {
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const bottomRef = React.useRef(null)
+  const sheetRef = React.useRef(null)
+  const dragStartY = React.useRef(null)
+  const [dragOffset, setDragOffset] = React.useState(0)
 
   // Scroll vers le bas à chaque nouveau message
   React.useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isTyping])
+
+  // Swipe-to-close gesture handlers
+  const onTouchStart = (e) => {
+    dragStartY.current = e.touches[0].clientY
+    setDragOffset(0)
+  }
+  const onTouchMove = (e) => {
+    if (dragStartY.current === null) return
+    const delta = e.touches[0].clientY - dragStartY.current
+    if (delta > 0) setDragOffset(delta)
+  }
+  const onTouchEnd = () => {
+    if (dragOffset > 80) {
+      onClose()
+    }
+    setDragOffset(0)
+    dragStartY.current = null
+  }
 
   const handleSend = async () => {
     if (!input.trim() || isTyping) return
@@ -1077,8 +1098,26 @@ function AIChatModal({ isOpen, onClose }) {
 
   return (
     <div className="modal-overlay" onClick={onClose} style={{ zIndex: 100 }}>
-      <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ height: '82vh', display: 'flex', flexDirection: 'column' }}>
-        <div className="modal-handle" />
+      <div
+        ref={sheetRef}
+        className="modal-sheet"
+        onClick={e => e.stopPropagation()}
+        style={{
+          height: '82vh', display: 'flex', flexDirection: 'column',
+          transform: `translateY(${dragOffset}px)`,
+          transition: dragOffset === 0 ? 'transform 0.3s cubic-bezier(0.22, 1, 0.36, 1)' : 'none'
+        }}
+      >
+        {/* Handle — swipeable zone */}
+        <div
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          onClick={onClose}
+          style={{ padding: '14px 0 6px', display: 'flex', justifyContent: 'center', cursor: 'pointer', touchAction: 'none' }}
+        >
+          <div style={{ width: 40, height: 5, borderRadius: 999, background: 'rgba(0, 61, 155, 0.15)' }} />
+        </div>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Sparkles size={20} color="var(--c-primary)" />
