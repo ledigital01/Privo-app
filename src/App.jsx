@@ -646,19 +646,19 @@ function Dashboard({ onAddClick }) {
               <>
                 <div className="section-header">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <h2>Insights IA</h2>
+                    <h2>{t('insights')}</h2>
                     <span className="pulse-dot" />
                   </div>
-                  <span className="see-all" onClick={() => navigate('/documents')}>Voir tout</span>
+                  <span className="see-all" onClick={() => navigate('/documents')}>{t('see_all')}</span>
                 </div>
                 <div className="space-y-3" style={{ marginBottom: 28 }}>
                   {expiringDocs.map(doc => (
                     <div className="insight-card" key={doc.id}>
                       <div className="icon-wrap sm warn" style={{ flexShrink: 0 }}><AlertCircle size={20} /></div>
                       <div>
-                        <div className="title-sm">Expiration Proche</div>
-                        <div className="insight-body">«&nbsp;{doc.title}&nbsp;» expire bientôt. Pensez à le renouveler.</div>
-                        <span className="insight-link" onClick={() => navigate('/documents')}>Voir <ChevronRight size={14} /></span>
+                        <div className="title-sm">{t('expiring_soon_title')}</div>
+                        <div className="insight-body">«&nbsp;{doc.title}&nbsp;» {t('expiring_soon_desc')}</div>
+                        <span className="insight-link" onClick={() => navigate('/documents')}>{t('see')} <ChevronRight size={14} /></span>
                       </div>
                     </div>
                   ))}
@@ -668,8 +668,8 @@ function Dashboard({ onAddClick }) {
 
             {/* Recent docs */}
             <div className="section-header" style={{ marginBottom: 14 }}>
-              <h2>Documents récents</h2>
-              <span className="see-all" onClick={() => navigate('/documents')}>Voir tout</span>
+              <h2>{t('recent_docs_title')}</h2>
+              <span className="see-all" onClick={() => navigate('/documents')}>{t('see_all')}</span>
             </div>
             <div className="space-y-3" style={{ marginBottom: 28 }}>
               {recentDocs.map(doc => {
@@ -693,19 +693,19 @@ function Dashboard({ onAddClick }) {
                 <Zap size={24} color="white" />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontFamily: 'Manrope', fontWeight: 800, color: 'white', fontSize: '0.95rem' }}>Passez au plan Pro</div>
-                <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>Documents illimités + IA avancée</div>
+                <div style={{ fontFamily: 'Manrope', fontWeight: 800, color: 'white', fontSize: '0.95rem' }}>{t('upgrade_pro')}</div>
+                <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>{t('upgrade_pro_desc')}</div>
               </div>
               <button onClick={() => navigate('/subscription')} style={{ background: 'white', color: 'var(--c-primary)', fontFamily: 'Manrope', fontWeight: 800, fontSize: '0.78rem', padding: '8px 14px', borderRadius: 'var(--r-sm)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                Voir →
+                {t('see')} →
               </button>
             </div>
 
             {/* Emergency card */}
             <div className="emergency-card">
-              <h3>🚨 Mode Urgence</h3>
-              <p>Préparez vos documents critiques pour un accès immédiat.</p>
-              <button className="btn-white"><Shield size={16} /> Activer l'accès</button>
+              <h3>{t('emergency_mode')}</h3>
+              <p>{t('emergency_desc')}</p>
+              <button className="btn-white"><Shield size={16} /> {t('activate_access')}</button>
             </div>
           </>
         )}

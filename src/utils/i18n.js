@@ -104,6 +104,18 @@ const dictionary = {
     pin_desc: 'Demander un code à 4 chiffres.',
     tfa: 'Double Authentification (2FA)',
     tfa_sub: 'Application Authenticator.',
+    // AI & Upgrades
+    insights: 'Insights IA',
+    expiring_soon_title: 'Expiration Proche',
+    expiring_soon_desc: 'expire bientôt. Pensez à le renouveler.',
+    recent_docs_title: 'Documents récents',
+    see_all: 'Voir tout',
+    see: 'Voir',
+    upgrade_pro: 'Passez au plan Pro',
+    upgrade_pro_desc: 'Documents illimités + IA avancée',
+    emergency_mode: '🚨 Mode Urgence',
+    emergency_desc: 'Préparez vos documents critiques pour un accès immédiat.',
+    activate_access: "Activer l'accès",
   },
   en: {
     // Navigation
@@ -209,6 +221,18 @@ const dictionary = {
     pin_desc: 'Require a 4-digit code.',
     tfa: 'Two-Factor Auth (2FA)',
     tfa_sub: 'Authenticator app.',
+    // AI & Upgrades
+    insights: 'AI Insights',
+    expiring_soon_title: 'Expiring Soon',
+    expiring_soon_desc: 'expires soon. Remember to renew it.',
+    recent_docs_title: 'Recent Documents',
+    see_all: 'See all',
+    see: 'See',
+    upgrade_pro: 'Upgrade to Pro plan',
+    upgrade_pro_desc: 'Unlimited documents + Advanced AI',
+    emergency_mode: '🚨 Emergency Mode',
+    emergency_desc: 'Prepare your critical documents for immediate access.',
+    activate_access: 'Activate access',
   }
 };
 
