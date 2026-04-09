@@ -442,11 +442,11 @@ function DeleteModal({ isOpen, doc, onClose, onConfirm }) {
             <Trash2 size={28} color="var(--c-danger)" />
           </div>
           <div>
-            <p className="title-sm">Supprimer ce document ?</p>
-            <p className="body-sm" style={{ marginTop: 6 }}>«&nbsp;{doc.title}&nbsp;» sera définitivement supprimé.</p>
+            <p className="title-sm">{t('delete_q')}</p>
+            <p className="body-sm" style={{ marginTop: 6 }}>«&nbsp;{doc.title}&nbsp;» {t('delete_desc')}</p>
           </div>
           <div style={{ display: 'flex', gap: 12, width: '100%' }}>
-            <button className="btn-secondary" style={{ flex: 1 }} onClick={onClose}>Annuler</button>
+            <button className="btn-secondary" style={{ flex: 1 }} onClick={onClose}>{t('cancel')}</button>
             <button
               onClick={onConfirm}
               style={{
@@ -456,7 +456,7 @@ function DeleteModal({ isOpen, doc, onClose, onConfirm }) {
                 border: 'none', cursor: 'pointer',
               }}
             >
-              Supprimer
+              {t('delete')}
             </button>
           </div>
         </div>
@@ -717,13 +717,13 @@ function Dashboard({ onAddClick }) {
 /* ================================================================
    PAGE — LIBRARY (dynamic + real search)
    ================================================================ */
-const ALL_CATEGORIES = ['Tous', 'Identité', 'Finance', 'Santé', 'Contrats', 'Études', 'Autre']
+const ALL_CATEGORIES = [t('cat_all'), t('cat_identity'), t('cat_finance'), t('cat_health'), t('cat_contracts'), t('cat_studies'), t('cat_other')]
 
 function Library({ onDocClick }) {
   const { filteredDocuments, searchQuery, setSearchQuery } = useApp()
-  const [cat, setCat] = useState('Tous')
+  const [cat, setCat] = useState(t('cat_all'))
 
-  const displayed = cat === 'Tous'
+  const displayed = cat === t('cat_all')
     ? filteredDocuments
     : filteredDocuments.filter(d => d.type === cat)
 
@@ -731,13 +731,13 @@ function Library({ onDocClick }) {
     <div className="page-enter">
       <div className="top-bar">
         <div>
-          <h1 className="title-lg">Bibliothèque</h1>
-          <p className="body-sm">{displayed.length} document{displayed.length !== 1 ? 's' : ''}</p>
+          <h1 className="title-lg">{t('library_title')}</h1>
+          <p className="body-sm">{displayed.length} {t('document_s')}</p>
         </div>
         <button
           className="notif-btn"
-          onClick={() => alert("Les filtres avancés (date, taille) seront bientôt disponibles dans une prochaine mise à jour ! 🚀")}
-          title="Filtres avancés"
+          onClick={() => alert(t('filters_soon'))}
+          title="Filtres"
         >
           <Filter size={18} />
         </button>
@@ -749,7 +749,7 @@ function Library({ onDocClick }) {
           <Search size={18} color="var(--c-primary-mid)" />
           <input
             type="text"
-            placeholder="Rechercher un document…"
+            placeholder={t('search_doc')}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
           />
@@ -771,7 +771,7 @@ function Library({ onDocClick }) {
         {displayed.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--c-text-muted)' }}>
             <FolderOpen size={40} style={{ margin: '0 auto 12px', opacity: 0.3 }} />
-            <p className="body-sm">Aucun document trouvé.</p>
+            <p className="body-sm">{t('no_doc_found')}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -809,18 +809,18 @@ function DocumentDetail({ doc, onBack, onShare, onDeleteRequest, onEditRequest }
     <div className="page-enter">
       <div className="top-bar">
         <button className="notif-btn" onClick={onBack} style={{ width: 40, height: 40 }}><ChevronLeft size={22} /></button>
-        <span className="title-sm">Détail</span>
+        <span className="title-sm">{t('detail')}</span>
         <button className="notif-btn" onClick={onEditRequest} style={{ width: 40, height: 40 }}><Edit2 size={18} /></button>
       </div>
 
       <div className="page-content" style={{ paddingTop: 8 }}>
         <div className="doc-preview card-lg" style={{ marginBottom: 20 }}>
           <div className={`icon-wrap lg ${status === 'warn' ? 'warn' : 'primary'}`}>{getIcon(doc.iconName, 30)}</div>
-          <span className="label-xs">Aperçu sécurisé</span>
+          <span className="label-xs">{t('secure_preview')}</span>
           <div style={{ position: 'absolute', top: 12, right: 12 }}>
             {status === 'ok'
-              ? <span className="badge success"><ShieldCheck size={11} /> Sécurisé</span>
-              : <span className="badge warn"><AlertCircle size={11} /> Attention</span>
+              ? <span className="badge success"><ShieldCheck size={11} /> {t('secure_badge')}</span>
+              : <span className="badge warn"><AlertCircle size={11} /> {t('warning_badge')}</span>
             }
           </div>
         </div>
@@ -830,33 +830,33 @@ function DocumentDetail({ doc, onBack, onShare, onDeleteRequest, onEditRequest }
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
           <div className="card">
-            <div className="label-xs" style={{ marginBottom: 4 }}>Expiration</div>
+            <div className="label-xs" style={{ marginBottom: 4 }}>{t('expiration')}</div>
             <div className="title-sm">{formatExpiry(doc.expiresAt)}</div>
           </div>
           <div className="card">
-            <div className="label-xs" style={{ marginBottom: 4 }}>Catégorie</div>
+            <div className="label-xs" style={{ marginBottom: 4 }}>{t('category')}</div>
             <div className="title-sm">{doc.type}</div>
           </div>
         </div>
 
         <div className="action-grid" style={{ marginBottom: 20 }}>
           <button className="action-btn" onClick={onShare}>
-            <div className="icon-wrap md neutral"><Share2 size={22} /></div>Partager
+            <div className="icon-wrap md neutral"><Share2 size={22} /></div>{t('share')}
           </button>
           <button className="action-btn">
-            <div className="icon-wrap md primary"><Zap size={22} /></div>Résumé IA
+            <div className="icon-wrap md primary"><Zap size={22} /></div>{t('ai_summary')}
           </button>
           <button className="action-btn">
-            <div className="icon-wrap md neutral"><Download size={22} /></div>Télécharger
+            <div className="icon-wrap md neutral"><Download size={22} /></div>{t('download')}
           </button>
           <button className="action-btn danger" onClick={onDeleteRequest}>
-            <div className="icon-wrap md danger"><Trash2 size={22} /></div>Supprimer
+            <div className="icon-wrap md danger"><Trash2 size={22} /></div>{t('delete')}
           </button>
         </div>
 
         <div className="insight-card" style={{ background: 'var(--c-surface-2)', border: '1.5px solid var(--c-border)' }}>
           <ShieldCheck size={20} color="var(--c-primary)" style={{ flexShrink: 0 }} />
-          <p className="body-sm">Protégé par chiffrement AES-256. Accessible uniquement via votre clé biométrique.</p>
+          <p className="body-sm">{t('detail_protected_by')}</p>
         </div>
       </div>
     </div>
@@ -921,7 +921,7 @@ function SecuritySettingsModal({ isOpen, onClose }) {
       <div className="modal-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Shield size={20} color="var(--c-success)" />
-          <h2 className="title-md">{setupStep ? 'Configuration' : 'Sécurité Locale'}</h2>
+          <h2 className="title-md">{setupStep ? 'Configuration' : t('local_security')}</h2>
         </div>
         <button className="modal-close-btn" onClick={() => { setSetupStep(null); onClose(); }}><X size={18} /></button>
       </div>
@@ -931,14 +931,14 @@ function SecuritySettingsModal({ isOpen, onClose }) {
         {!setupStep && (
           <>
             <p className="body-sm" style={{ marginBottom: 10, color: 'var(--c-text-muted)' }}>
-              Ajoutez une couche de protection extra pour verrouiller l'accès.
+              {t('extra_protect')}
             </p>
 
             {/* PIN Code */}
             <div className="action-row" style={{ alignItems: 'center', padding: '14px 16px', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)' }}>
               <div style={{ flex: 1 }}>
-                <div className="action-text">Verrouillage par code PIN</div>
-                <div className="action-desc">Demander un code à 4 chiffres.</div>
+                <div className="action-text">{t('pin_lock')}</div>
+                <div className="action-desc">{t('pin_desc')}</div>
               </div>
               <label className="toggle-switch">
                 <input type="checkbox" checked={usePin} onChange={handlePinToggle} />
@@ -949,8 +949,8 @@ function SecuritySettingsModal({ isOpen, onClose }) {
             {/* 2FA */}
             <div className="action-row" style={{ alignItems: 'center', padding: '14px 16px', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)' }}>
               <div style={{ flex: 1 }}>
-                <div className="action-text">Double Authentification (2FA)</div>
-                <div className="action-desc">Application Authenticator.</div>
+                <div className="action-text">{t('tfa')}</div>
+                <div className="action-desc">{t('tfa_sub')}</div>
               </div>
               <label className="toggle-switch">
                 <input type="checkbox" checked={use2fa} onChange={handle2faToggle} />
@@ -1508,24 +1508,25 @@ function NotificationsPage({ onDocClick }) {
   const { documents } = useApp()
   const soon = Date.now() + 30 * 24 * 60 * 60 * 1000
   const alerts = documents.filter(d => d.expiresAt && new Date(d.expiresAt).getTime() < soon)
+  const lang = localStorage.getItem('digisafe_lang') || 'fr'
 
   return (
     <div className="page-enter">
-      <div className="top-bar"><h1 className="title-lg">Alertes & Rappels</h1></div>
+      <div className="top-bar"><h1 className="title-lg">{t('alerts_title')}</h1></div>
       <div className="page-content" style={{ paddingTop: 8 }}>
         {alerts.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 24px', color: 'var(--c-text-muted)' }}>
             <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--c-surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
               <Bell size={32} opacity={0.3} />
             </div>
-            <p className="title-sm">Tout est en ordre</p>
-            <p className="body-sm" style={{ marginTop: 8 }}>Aucun document n'expire dans les 30 prochains jours.</p>
+            <p className="title-sm">{t('all_good')}</p>
+            <p className="body-sm" style={{ marginTop: 8 }}>{t('no_expiring')}</p>
           </div>
         ) : (
           <div className="space-y-4">
             <div className="insight-card" style={{ background: 'var(--c-warn-soft)', border: 'none' }}>
               <AlertCircle size={22} color="var(--c-warn)" />
-              <p className="body-sm" style={{ color: 'var(--c-warn)', fontWeight: 600 }}>{alerts.length} document{alerts.length > 1 ? 's' : ''} demande{alerts.length > 1 ? 'nt' : ''} votre attention.</p>
+              <p className="body-sm" style={{ color: 'var(--c-warn)', fontWeight: 600 }}>{alerts.length} {t('alerts_count')}</p>
             </div>
             {alerts.map(doc => {
               const status = getDocStatus(doc.expiresAt)
@@ -1534,7 +1535,7 @@ function NotificationsPage({ onDocClick }) {
                   <div className={`icon-wrap md warn`}><Clock size={22} /></div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="doc-card-title">{doc.title}</div>
-                    <div className="doc-card-meta">Expire le : {new Date(doc.expiresAt).toLocaleDateString('fr-FR')}</div>
+                    <div className="doc-card-meta">{t('expires_on')} {new Date(doc.expiresAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'fr-FR')}</div>
                   </div>
                   <div className="badge warn" style={{ fontSize: '0.7rem' }}>{formatExpiry(doc.expiresAt).replace('⚠ ', '')}</div>
                 </div>
