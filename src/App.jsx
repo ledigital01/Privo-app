@@ -804,17 +804,16 @@ function Library({ onDocClick }) {
    ================================================================ */
 function DocumentDetail({ doc, onBack, onShare, onDeleteRequest, onEditRequest }) {
   const [isRevealed, setIsRevealed] = useState(false)
+  const lang = localStorage.getItem('digisafe_lang') || 'fr'
+
   if (!doc) return null
   const status = getDocStatus(doc.expiresAt)
 
-  // Images dynamiques pour simuler le document réel selon la catégorie
-  const simulationImages = {
-    'Identité': 'https://images.unsplash.com/photo-1590451381395-5eeab45f63d0?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-    'Finance': 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-    'Santé': 'https://images.unsplash.com/photo-1584308666744-24d59b298b90?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-    'Contrat': 'https://images.unsplash.com/photo-1589829085413-56de8ae18c73?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'
-  }
-  const previewImg = simulationImages[doc.type] || 'https://images.unsplash.com/photo-1618044733300-9472054094ee?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'
+  const handleRevealStart = () => setIsRevealed(true)
+  const handleRevealEnd = () => setIsRevealed(false)
+
+  // URL factice pour simuler l'image numérisée en attendant le vrai stockage
+  const demoImageUrl = "https://images.unsplash.com/photo-1618044733300-9472054094ee?q=80&w=600&auto=format&fit=crop"
 
   return (
     <div className="page-enter">
@@ -827,25 +826,56 @@ function DocumentDetail({ doc, onBack, onShare, onDeleteRequest, onEditRequest }
       <div className="page-content" style={{ paddingTop: 8 }}>
         <div 
           className="doc-preview card-lg" 
-          style={{ marginBottom: 20, cursor: 'pointer', backgroundImage: isRevealed ? `url(${previewImg})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', transition: 'background 0.3s ease' }}
-          onPointerDown={() => setIsRevealed(true)}
-          onPointerUp={() => setIsRevealed(false)}
-          onPointerLeave={() => setIsRevealed(false)}
-          onContextMenu={e => e.preventDefault()}
+          style={{ 
+            marginBottom: 20,
+            cursor: 'pointer',
+            height: 220,
+            position: 'relative',
+            overflow: 'hidden',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            background: 'var(--c-surface-2)',
+            userSelect: 'none',
+            WebkitUserSelect: 'none'
+          }}
+          onMouseDown={handleRevealStart}
+          onMouseUp={handleRevealEnd}
+          onMouseLeave={handleRevealEnd}
+          onTouchStart={handleRevealStart}
+          onTouchEnd={handleRevealEnd}
         >
-          {!isRevealed && (
-            <>
-              <div className={`icon-wrap lg ${status === 'warn' ? 'warn' : 'primary'}`}>{getIcon(doc.iconName, 30)}</div>
-              <span className="label-xs">{t('secure_preview')}</span>
-              <span className="body-sm" style={{ fontSize: '0.65rem', marginTop: -6, opacity: 0.6 }}>Maintenir pour révéler</span>
-              <div style={{ position: 'absolute', top: 12, right: 12 }}>
-                {status === 'ok'
-                  ? <span className="badge success"><ShieldCheck size={11} /> {t('secure_badge')}</span>
-                  : <span className="badge warn"><AlertCircle size={11} /> {t('warning_badge')}</span>
-                }
-              </div>
-            </>
-          )}
+          {/* L'image de fond (floutée par défaut) */}
+          <div style={{
+            position: 'absolute', inset: -20, // inset négatif pour éviter les bords nets
+            background: `url(${demoImageUrl}) center/cover`,
+            filter: isRevealed ? 'blur(0px)' : 'blur(16px)',
+            opacity: isRevealed ? 1 : 0.3,
+            transition: 'all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
+            zIndex: 1
+          }}>
+            <div style={{ position: 'absolute', inset: 0, background: 'var(--c-surface)', opacity: isRevealed ? 0 : 0.6, transition: 'opacity 0.3s' }} />
+          </div>
+
+          <div style={{
+            position: 'relative', zIndex: 2,
+            opacity: isRevealed ? 0 : 1,
+            transition: 'all 0.2s',
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            transform: isRevealed ? 'scale(0.95)' : 'scale(1)'
+          }}>
+            <div className={`icon-wrap lg ${status === 'warn' ? 'warn' : 'primary'}`}>{getIcon(doc.iconName, 30)}</div>
+            <span className="label-xs" style={{ marginTop: 12 }}>{t('secure_preview')}</span>
+            <span style={{ fontSize: '0.65rem', color: 'var(--c-text-muted)', marginTop: 8, fontStyle: 'italic' }}>
+              {lang === 'en' ? 'Press & Hold to reveal' : 'Maintenir appuyé pour révéler'}
+            </span>
+          </div>
+
+          <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 3, opacity: isRevealed ? 0 : 1, transition: 'opacity 0.2s' }}>
+            {status === 'ok'
+              ? <span className="badge success"><ShieldCheck size={11} /> {t('secure_badge')}</span>
+              : <span className="badge warn"><AlertCircle size={11} /> {t('warning_badge')}</span>
+            }
+          </div>
         </div>
 
         <h1 className="title-lg" style={{ marginBottom: 6 }}>{doc.title}</h1>
