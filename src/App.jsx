@@ -1015,96 +1015,153 @@ function AppContent() {
 }
 
 /* ================================================================
-   MODAL — AI CHAT
+   MODAL — AI CHAT (Real Claude via ai_chat Edge Function)
    ================================================================ */
 function AIChatModal({ isOpen, onClose }) {
+  const { documents, authUser } = useApp()
   const [messages, setMessages] = useState([
-    { role: 'assistant', text: 'Bonjour ! Je suis l\'assistant IA Privo. Posez-moi une question sur vos documents (ex: "Quand expire mon passeport ?").' }
+    { role: 'assistant', text: 'Salut ! Pose-moi n\'importe quelle question sur tes documents.' }
   ])
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
+  const bottomRef = React.useRef(null)
 
-  const handleSend = () => {
-    if (!input.trim()) return
+  // Scroll vers le bas à chaque nouveau message
+  React.useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, isTyping])
+
+  const handleSend = async () => {
+    if (!input.trim() || isTyping) return
     const userMsg = input.trim()
-    setMessages(prev => [...prev, { role: 'user', text: userMsg }])
+    const newMessages = [...messages, { role: 'user', text: userMsg }]
+    setMessages(newMessages)
     setInput('')
     setIsTyping(true)
 
-    // Simulate RAG query
-    setTimeout(() => {
-      let aiResponse = "Désolé, je ne connais pas encore cette information."
-      if (userMsg.toLowerCase().includes('passeport') || userMsg.toLowerCase().includes('expire')) {
-        aiResponse = "J'ai trouvé \"Passeport Français\" dans votre coffre. Il expire le 12 Octobre 2029 (dans plus de 3 ans). Tout est en règle !"
-      } else if (userMsg.toLowerCase().includes('contrat')) {
-        aiResponse = "Je vois que vous avez un contrat de travail à durée indéterminée (CDI) signé en Janvier 2024. Souhaitez-vous un résumé ?"
-      }
-      setMessages(prev => [...prev, { role: 'assistant', text: aiResponse }])
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+
+      const response = await fetch(
+        'https://tvotvvalqctfuyylkzrz.supabase.co/functions/v1/ai_chat',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            messages: newMessages,
+            documents: documents.map(d => ({
+              title: d.title,
+              type: d.type,
+              expiresAt: d.expiresAt
+            }))
+          })
+        }
+      )
+
+      const data = await response.json()
+      if (data.error) throw new Error(data.error)
+
+      setMessages(prev => [...prev, { role: 'assistant', text: data.reply }])
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'assistant', text: '⚠️ Une erreur s\'est produite. Réessaie.' }])
+    } finally {
       setIsTyping(false)
-    }, 1500)
+    }
   }
 
   if (!isOpen) return null
 
   return (
     <div className="modal-overlay" onClick={onClose} style={{ zIndex: 100 }}>
-      <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ height: '80vh', display: 'flex', flexDirection: 'column' }}>
+      <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ height: '82vh', display: 'flex', flexDirection: 'column' }}>
         <div className="modal-handle" />
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Sparkles size={20} color="var(--c-primary)" />
             <h2 className="title-md">Assistant Privo</h2>
+            <span style={{ fontSize: '0.7rem', background: 'var(--c-surface-2)', color: 'var(--c-text-subtle)', padding: '2px 8px', borderRadius: 999, marginLeft: 4, fontWeight: 600 }}>IA</span>
           </div>
           <button className="modal-close-btn" onClick={onClose}><X size={18} /></button>
         </div>
 
-        <div className="modal-body no-scrollbar" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* Messages */}
+        <div className="modal-body no-scrollbar" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12, paddingBottom: 8 }}>
           {messages.map((m, i) => (
             <div key={i} style={{
               alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
               background: m.role === 'user' ? 'var(--c-primary)' : 'var(--c-surface-2)',
               color: m.role === 'user' ? 'white' : 'var(--c-text)',
-              padding: '12px 16px', borderRadius: 'var(--r-md)',
-              borderBottomRightRadius: m.role === 'user' ? '4px' : 'var(--r-md)',
-              borderBottomLeftRadius: m.role === 'assistant' ? '4px' : 'var(--r-md)',
-              maxWidth: '85%', fontSize: '0.9rem', lineHeight: 1.5
+              padding: '10px 14px', borderRadius: '18px',
+              borderBottomRightRadius: m.role === 'user' ? '4px' : '18px',
+              borderBottomLeftRadius: m.role === 'assistant' ? '4px' : '18px',
+              maxWidth: '85%', fontSize: '0.9rem', lineHeight: 1.5,
+              whiteSpace: 'pre-wrap'
             }}>
               {m.text}
             </div>
           ))}
           {isTyping && (
-            <div style={{ alignSelf: 'flex-start', background: 'var(--c-surface-2)', padding: '12px 16px', borderRadius: 'var(--r-md)', fontSize: '0.9rem', opacity: 0.6 }}>
-              L'IA réfléchit...
+            <div style={{
+              alignSelf: 'flex-start', background: 'var(--c-surface-2)',
+              padding: '10px 16px', borderRadius: '18px', borderBottomLeftRadius: 4,
+              display: 'flex', gap: 4, alignItems: 'center'
+            }}>
+              {[0, 1, 2].map(i => (
+                <div key={i} style={{
+                  width: 7, height: 7, borderRadius: '50%',
+                  background: 'var(--c-text-subtle)',
+                  animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite`
+                }} />
+              ))}
             </div>
           )}
+          <div ref={bottomRef} />
         </div>
 
-        <div style={{ padding: '16px 20px', borderTop: '1px solid var(--c-border)', display: 'flex', gap: 10 }}>
+        {/* Input */}
+        <div style={{ padding: '12px 16px', borderTop: '1px solid var(--c-border)', display: 'flex', gap: 10, alignItems: 'center' }}>
           <input
             type="text"
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSend()}
-            placeholder="Demander quelque chose..."
+            placeholder="Pose une question..."
+            disabled={isTyping}
             style={{
               flex: 1, background: 'var(--c-surface-2)', border: '1px solid var(--c-border)',
-              borderRadius: '24px', padding: '12px 16px', fontSize: '0.95rem'
+              borderRadius: '24px', padding: '12px 16px', fontSize: '0.95rem',
+              opacity: isTyping ? 0.6 : 1
             }}
           />
           <button
             onClick={handleSend}
+            disabled={isTyping || !input.trim()}
             style={{
-              width: 46, height: 46, borderRadius: '23px', background: 'var(--c-primary)',
-              color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center'
+              width: 46, height: 46, borderRadius: '23px',
+              background: isTyping || !input.trim() ? 'var(--c-surface-2)' : 'var(--c-primary)',
+              color: isTyping || !input.trim() ? 'var(--c-text-subtle)' : 'white',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all 0.2s', border: 'none', cursor: isTyping ? 'not-allowed' : 'pointer'
             }}
           >
             <Send size={18} style={{ marginLeft: -2 }} />
           </button>
         </div>
+        <style>{`
+          @keyframes bounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-6px); }
+          }
+        `}</style>
       </div>
     </div>
   )
 }
+
 
 /* ================================================================
    PAGE — NOTIFICATIONS (dynamic alerts)
