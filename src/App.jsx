@@ -1002,17 +1002,36 @@ function SecuritySettingsModal({ isOpen, onClose }) {
           <div style={{ textAlign: 'center', padding: '10px 0' }}>
             <p className="title-sm">Créer un code PIN</p>
             <p className="body-sm" style={{ marginBottom: 20 }}>Ce code sera demandé à l'ouverture de l'application.</p>
+            
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 16, margin: '20px 0 30px' }} onClick={() => document.getElementById('hiddenPinInput').focus()}>
+              {[0, 1, 2, 3].map(i => (
+                <div key={i} style={{ 
+                  width: 55, height: 60, borderRadius: 'var(--r-md)', 
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'var(--c-surface)', border: `2px solid ${pinInput.length === i ? 'var(--c-primary)' : 'var(--c-border)'}`,
+                  fontSize: 28, fontWeight: 700, color: 'var(--c-text)',
+                  boxShadow: pinInput.length === i ? 'var(--shadow-sm)' : 'none',
+                  transition: 'all 0.2s'
+                }}>
+                  {pinInput[i] ? '●' : ''}
+                </div>
+              ))}
+            </div>
+            {/* Input invisible pour la saisie clavier natif mobile */}
             <input 
-              type="password" 
+              id="hiddenPinInput"
+              type="tel" 
+              inputMode="numeric"
               maxLength={4} 
               autoFocus
               value={pinInput} 
               onChange={e => setPinInput(e.target.value.replace(/[^0-9]/g, ''))}
-              style={{ fontSize: 32, letterSpacing: 12, textAlign: 'center', width: 140, padding: 10, borderRadius: 'var(--r-md)', border: '2px solid var(--c-primary)', background: 'var(--c-surface-2)' }} 
+              style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }} 
             />
+
             <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
               <button className="btn-secondary w-full" onClick={() => setSetupStep(null)}>Annuler</button>
-              <button className="btn-primary w-full" onClick={savePin}>Enregistrer</button>
+              <button className="btn-primary w-full" onClick={savePin} disabled={pinInput.length !== 4}>Enregistrer</button>
             </div>
           </div>
         )}
@@ -1433,6 +1452,80 @@ function NotificationsPage({ onDocClick }) {
 }
 
 /* ================================================================
+   APP LOCK SCREEN - Checks PIN/Biometry before AppContent
+   ================================================================ */
+function AppLockScreen({ children }) {
+  const [unlocked, setUnlocked] = useState(false)
+  const [pinInput, setPinInput] = useState('')
+  const [errorShake, setErrorShake] = useState(false)
+
+  const savedPin = localStorage.getItem('digisafe_pin')
+  
+  useEffect(() => {
+    if (!savedPin) {
+      setUnlocked(true)
+    }
+  }, [savedPin])
+
+  if (unlocked) return children
+
+  const handlePinChar = (char) => {
+    if (pinInput.length < 4) {
+      const newPin = pinInput + char
+      setPinInput(newPin)
+      if (newPin.length === 4) {
+        if (newPin === savedPin) {
+           // Succès
+           setTimeout(() => setUnlocked(true), 200)
+        } else {
+           // Erreur
+           setErrorShake(true)
+           if (window.navigator.vibrate) window.navigator.vibrate([100, 100, 100])
+           setTimeout(() => { setErrorShake(false); setPinInput('') }, 500)
+        }
+      }
+    }
+  }
+
+  const handleDelete = () => setPinInput(prev => prev.slice(0, -1))
+
+  return (
+    <div style={{ height: '100dvh', background: 'var(--c-bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, position: 'relative' }}>
+      <div style={{ position: 'absolute', top: 60, textAlign: 'center' }}>
+        <div style={{ width: 60, height: 60, borderRadius: 20, background: 'var(--c-primary-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+          <ShieldCheck size={32} color="var(--c-primary)" />
+        </div>
+        <h2 className="title-md">DigiSAFE verrouillé</h2>
+        <p className="body-sm" style={{ marginTop: 8 }}>Saisissez votre code PIN pour accéder à vos documents.</p>
+      </div>
+
+      <div style={{ display: 'flex', gap: 16, marginTop: 40, marginBottom: 40, transform: errorShake ? 'translateX(-10px)' : 'none', transition: 'transform 0.1s' }} className={errorShake ? 'shake-animation' : ''}>
+        {[0, 1, 2, 3].map(i => (
+          <div key={i} style={{ 
+            width: 20, height: 20, borderRadius: '50%',
+            background: pinInput.length > i ? 'var(--c-primary)' : 'var(--c-border)',
+            transition: 'background 0.2s',
+            boxShadow: pinInput.length > i ? '0 0 10px rgba(0, 61, 155, 0.4)' : 'none'
+          }} />
+        ))}
+      </div>
+
+      {/* Numpad */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px 24px', width: '100%', maxWidth: 300, marginTop: 'auto', marginBottom: 40 }}>
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+          <button key={num} onClick={() => handlePinChar(num.toString())} style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--c-surface)', border: 'none', fontSize: 28, fontWeight: 600, color: 'var(--c-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', cursor: 'pointer', boxShadow: 'var(--shadow-sm)' }}>
+            {num}
+          </button>
+        ))}
+        <div />
+        <button onClick={() => handlePinChar('0')} style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--c-surface)', border: 'none', fontSize: 28, fontWeight: 600, color: 'var(--c-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', cursor: 'pointer', boxShadow: 'var(--shadow-sm)' }}>0</button>
+        <button onClick={handleDelete} style={{ width: 72, height: 72, borderRadius: '50%', background: 'transparent', border: 'none', color: 'var(--c-text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', cursor: 'pointer' }}><X size={32} /></button>
+      </div>
+    </div>
+  )
+}
+
+/* ================================================================
    AUTH GUARD — shows Login/Register if not authenticated
    ================================================================ */
 function AuthGuard() {
@@ -1449,7 +1542,9 @@ function AuthGuard() {
 
   return (
     <Router>
-      <AppContent />
+      <AppLockScreen>
+        <AppContent />
+      </AppLockScreen>
     </Router>
   )
 }
