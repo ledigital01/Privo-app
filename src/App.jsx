@@ -812,8 +812,11 @@ function DocumentDetail({ doc, onBack, onShare, onDeleteRequest, onEditRequest }
   const handleRevealStart = () => setIsRevealed(true)
   const handleRevealEnd = () => setIsRevealed(false)
 
-  // URL factice pour simuler l'image numérisée en attendant le vrai stockage
+  // URL dynamique basée sur le vrai fichier uploadé dans le Storage Supabase
+  const supabaseUrl = 'https://tvotvvalqctfuyylkzrz.supabase.co'
+  const realImageUrl = doc.filePath ? `${supabaseUrl}/storage/v1/object/public/documents/${doc.filePath}` : null
   const demoImageUrl = "https://images.unsplash.com/photo-1618044733300-9472054094ee?q=80&w=600&auto=format&fit=crop"
+  const backgroundUrl = realImageUrl || demoImageUrl
 
   return (
     <div className="page-enter">
@@ -844,10 +847,10 @@ function DocumentDetail({ doc, onBack, onShare, onDeleteRequest, onEditRequest }
           onTouchStart={handleRevealStart}
           onTouchEnd={handleRevealEnd}
         >
-          {/* L'image de fond (floutée par défaut) */}
+          {/* L'image de fond dynamique (floutée par défaut, devient nette et visible) */}
           <div style={{
             position: 'absolute', inset: -20, // inset négatif pour éviter les bords nets
-            background: `url(${demoImageUrl}) center/cover`,
+            background: `url('${backgroundUrl}') center/cover`,
             filter: isRevealed ? 'blur(0px)' : 'blur(16px)',
             opacity: isRevealed ? 1 : 0.3,
             transition: 'all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
