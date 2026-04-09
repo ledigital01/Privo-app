@@ -859,9 +859,109 @@ function DocumentDetail({ doc, onBack, onShare, onDeleteRequest, onEditRequest }
 }
 
 /* ================================================================
+   MODAL — SECURITY SETTINGS
+   ================================================================ */
+function SecuritySettingsModal({ isOpen, onClose }) {
+  const [usePin, setUsePin] = useState(false)
+  const [useBiometrics, setUseBiometrics] = useState(false)
+  const [use2fa, setUse2fa] = useState(false)
+
+  const handleBiometricsToggle = async () => {
+    if (!useBiometrics) {
+      try {
+        // Simulation d'une demande WebAuthn pour déclencher l'interface native (FaceID / TouchID)
+        // Ceci simule juste la création d'une clé locale pour valider la biométrie
+        if (window.PublicKeyCredential) {
+          const challenge = new Uint8Array(32);
+          crypto.getRandomValues(challenge);
+          
+          await navigator.credentials.create({
+            publicKey: {
+              challenge: challenge,
+              rp: { name: "DigiSAFE" },
+              user: {
+                id: new Uint8Array(16),
+                name: "user@digisafe.app",
+                displayName: "Utilisateur"
+              },
+              pubKeyCredParams: [{ type: "public-key", alg: -7 }], // ES256
+              authenticatorSelection: { userVerification: "required" },
+              timeout: 60000
+            }
+          });
+          setUseBiometrics(true)
+        } else {
+          alert("Votre navigateur ne supporte pas la biométrie avancée.");
+        }
+      } catch (err) {
+        console.log("Biométrie annulée ou erreur", err)
+        // L'utilisateur a refusé ou annulé le FaceID
+      }
+    } else {
+      setUseBiometrics(false)
+    }
+  }
+
+  if (!isOpen) return null
+  return (
+    <BottomSheet isOpen={isOpen} onClose={onClose} height="auto">
+      <div className="modal-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Shield size={20} color="var(--c-success)" />
+          <h2 className="title-md">Sécurité Locale</h2>
+        </div>
+        <button className="modal-close-btn" onClick={onClose}><X size={18} /></button>
+      </div>
+      <div className="modal-body" style={{ paddingBottom: 40 }}>
+        <p className="body-sm" style={{ marginBottom: 10, color: 'var(--c-text-muted)' }}>
+          Ajoutez une couche de protection supplémentaire pour déverrouiller l'accès à ce coffre-fort numérique sur cet appareil.
+        </p>
+
+        {/* PIN Code */}
+        <div className="action-row" style={{ alignItems: 'center', padding: '14px 16px', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)' }}>
+          <div style={{ flex: 1 }}>
+            <div className="action-text">Verrouillage par code PIN</div>
+            <div className="action-desc">Demander un code à 4 chiffres.</div>
+          </div>
+          <label className="toggle-switch">
+            <input type="checkbox" checked={usePin} onChange={() => setUsePin(!usePin)} />
+            <span className="toggle-slider"></span>
+          </label>
+        </div>
+
+        {/* Biometrics */}
+        <div className="action-row" style={{ alignItems: 'center', padding: '14px 16px', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)' }}>
+          <div style={{ flex: 1 }}>
+            <div className="action-text">Face ID / Touch ID</div>
+            <div className="action-desc">Déverrouillage instantané.</div>
+          </div>
+          <label className="toggle-switch">
+            <input type="checkbox" checked={useBiometrics} onChange={handleBiometricsToggle} />
+            <span className="toggle-slider"></span>
+          </label>
+        </div>
+        
+        {/* 2FA */}
+        <div className="action-row" style={{ alignItems: 'center', padding: '14px 16px', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)' }}>
+          <div style={{ flex: 1 }}>
+            <div className="action-text">Double Authentification (2FA)</div>
+            <div className="action-desc">SMS ou Google Authenticator.</div>
+          </div>
+          <label className="toggle-switch">
+            <input type="checkbox" checked={use2fa} onChange={() => setUse2fa(!use2fa)} />
+            <span className="toggle-slider"></span>
+          </label>
+        </div>
+
+      </div>
+    </BottomSheet>
+  )
+}
+
+/* ================================================================
    PAGE — PROFILE (dynamic user data)
    ================================================================ */
-function ProfilePage() {
+function ProfilePage({ onSecurityClick }) {
   const { authUser, stats, logout } = useApp()
   const navigate = useNavigate()
   const user = authUser || {}
@@ -880,7 +980,7 @@ function ProfilePage() {
 
   const MENU = [
     { icon: <CreditCard size={20} />, label: 'Abonnement & Paiements', desc: `Plan actuel : ${user.plan === 'free' ? 'Gratuit' : user.plan === 'pro' ? 'Pro' : 'Business'}`, path: '/subscription', action: null, color: 'primary' },
-    { icon: <Shield size={20} />, label: 'Sécurité', desc: 'Biométrie, PIN, 2FA', path: null, action: showComingSoon, color: 'success' },
+    { icon: <Shield size={20} />, label: 'Sécurité', desc: 'Biométrie, PIN, 2FA', path: null, action: onSecurityClick, color: 'success' },
     { icon: <Settings size={20} />, label: 'Paramètres', desc: 'Langue, notifications', path: null, action: showComingSoon, color: 'neutral' },
     { icon: <HelpCircle size={20} />, label: 'Aide & Support', desc: "FAQ, contacter l'équipe", path: null, action: showComingSoon, color: 'neutral' },
     { icon: <LogOut size={20} />, label: 'Déconnexion', desc: null, path: null, action: handleLogout, color: 'danger' },
@@ -975,7 +1075,7 @@ function AppContent() {
           <Route path="/documents" element={<Library onDocClick={handleDocClick} />} />
           <Route path="/detail" element={<DocumentDetail doc={selectedDoc} onBack={() => navigate(-1)} onShare={() => setModal('SHARE')} onDeleteRequest={handleDeleteRequest} onEditRequest={() => setModal('EDIT')} />} />
           <Route path="/notifications" element={<NotificationsPage onDocClick={handleDocClick} />} />
-          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/profile" element={<ProfilePage onSecurityClick={() => setModal('SECURITY')} />} />
           <Route path="/subscription" element={<SubscriptionPage onBack={() => navigate(-1)} />} />
         </Routes>
         <BottomNav onAddClick={() => setModal('SCAN')} />
@@ -995,11 +1095,11 @@ function AppContent() {
 
       </div>
 
-      {/* AddDocumentModal supprimé */}
       <EditDocumentModal isOpen={modal === 'EDIT'} onClose={() => setModal(null)} doc={selectedDoc} />
       <IAScanModal isOpen={modal === 'SCAN'} onClose={() => setModal(null)} />
+      <DeleteModal isOpen={modal === 'DELETE'} onClose={() => setModal(null)} onConfirm={handleDeleteConfirm} doc={selectedDoc} />
       <QuickShareModal isOpen={modal === 'SHARE'} onClose={() => setModal(null)} />
-      <DeleteModal isOpen={modal === 'DELETE'} doc={selectedDoc} onClose={() => setModal(null)} onConfirm={handleDeleteConfirm} />
+      <SecuritySettingsModal isOpen={modal === 'SECURITY'} onClose={() => setModal(null)} />
       <AIChatModal isOpen={modal === 'CHAT'} onClose={() => setModal(null)} />
     </>
   )
