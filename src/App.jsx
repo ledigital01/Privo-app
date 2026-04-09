@@ -1039,28 +1039,56 @@ function SecuritySettingsModal({ isOpen, onClose }) {
         {setupStep === '2FA' && (
           <div style={{ textAlign: 'center', padding: '10px 0' }}>
             <p className="title-sm">Configurer l'Authenticator</p>
-            <p className="body-sm" style={{ marginBottom: 16 }}>Scannez ce QR Code avec Google Authenticator ou Authy.</p>
+            <p className="body-sm" style={{ marginBottom: 24, padding: '0 10px' }}>
+              Utilisez votre application d'authentification (Google Authenticator, Authy) pour scanner ce QR Code.
+            </p>
             
-            <div style={{ width: 150, height: 150, margin: '0 auto', background: 'white', padding: 10, borderRadius: 10 }}>
-               {/* Mock QR Code using CSS grid */}
-               <div style={{ width: '100%', height: '100%', display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 2 }}>
-                 {Array.from({length: 25}).map((_, i) => <div key={i} style={{ background: Math.random() > 0.4 ? 'black' : 'transparent' }} />)}
-               </div>
+            <div style={{ width: 180, height: 180, margin: '0 auto 16px', background: 'white', padding: 12, borderRadius: 16, boxShadow: 'var(--shadow-sm)', border: '1px solid var(--c-border)' }}>
+               {/* Vrai QR Code généré dynamiquement à partir d'une clé OTP */}
+               <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent('otpauth://totp/DigiSAFE:user@digisafe.app?secret=JBSWY3DPEHPK3PXP&issuer=DigiSAFE')}`} alt="QR Code 2FA" style={{ width: '100%', height: '100%', display: 'block' }} />
             </div>
 
-            <p className="label-xs" style={{ marginTop: 16, marginBottom: 8 }}>Entrez le code à 6 chiffres</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 28 }}>
+              <div className="label-xs" style={{ color: 'var(--c-text-muted)' }}>Ou saisissez la clé manuellement :</div>
+              <div style={{ fontFamily: 'monospace', letterSpacing: 2, fontSize: '0.95rem', fontWeight: 600, color: 'var(--c-text)', background: 'var(--c-surface-2)', padding: '6px 14px', borderRadius: 8, display: 'inline-block', margin: '0 auto', border: '1px solid var(--c-border)' }}>
+                JBSW Y3DP EHPK 3PXP
+              </div>
+            </div>
+
+            <p className="label-xs" style={{ marginBottom: 12 }}>Entrez le code à 6 chiffres généré :</p>
+            
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 10 }} onClick={() => document.getElementById('hiddenTfaInput').focus()}>
+              {[0, 1, 2, 3, 4, 5].map(i => (
+                <div key={i} style={{ 
+                  width: 44, height: 50, borderRadius: 'var(--r-sm)', 
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'var(--c-surface)', border: `1.5px solid ${tfaInput.length === i ? 'var(--c-primary)' : 'var(--c-border)'}`,
+                  fontSize: 24, fontWeight: 700, color: 'var(--c-text)',
+                  boxShadow: tfaInput.length === i ? 'var(--shadow-xs)' : 'none',
+                  transition: 'all 0.2s',
+                  position: 'relative'
+                }}>
+                  {tfaInput[i] || ''}
+                  {tfaInput.length === i && <div className="blink-cursor" style={{ position: 'absolute', width: 2, height: 26, background: 'var(--c-primary)', borderRadius: 2 }} />}
+                </div>
+              ))}
+            </div>
+            
+            {/* Input invisible pour la gestion du clavier */}
             <input 
-              type="text" 
+              id="hiddenTfaInput"
+              type="tel" 
+              inputMode="numeric"
               maxLength={6} 
               autoFocus
               value={tfaInput} 
               onChange={e => setTfaInput(e.target.value.replace(/[^0-9]/g, ''))}
-              style={{ fontSize: 24, letterSpacing: 8, textAlign: 'center', width: 180, padding: 10, borderRadius: 'var(--r-md)', border: '2px solid var(--c-primary)', background: 'var(--c-surface-2)' }} 
+              style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }} 
             />
             
             <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
               <button className="btn-secondary w-full" onClick={() => setSetupStep(null)}>Annuler</button>
-              <button className="btn-primary w-full" onClick={save2fa}>Vérifier</button>
+              <button className="btn-primary w-full" onClick={save2fa} disabled={tfaInput.length !== 6}>Activer la 2FA</button>
             </div>
           </div>
         )}

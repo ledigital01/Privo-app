@@ -670,6 +670,13 @@ input:checked + .toggle-slider:before {
   40%, 60% { transform: translate3d(4px, 0, 0); }
 }
 
+.blink-cursor {
+  animation: blink 1s step-end infinite;
+}
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
 /* ——— DOCUMENT CARD ——— */
 .doc-card {
   display: flex;
