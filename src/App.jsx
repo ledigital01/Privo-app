@@ -1062,6 +1062,7 @@ function SettingsModal({ isOpen, onClose }) {
   const [lang, setLang] = useState(localStorage.getItem('digisafe_lang') || 'fr')
   const [pushNotifs, setPushNotifs] = useState(localStorage.getItem('digisafe_push') !== 'false')
   const [emailAlerts, setEmailAlerts] = useState(localStorage.getItem('digisafe_alert') !== 'false')
+  const [darkTheme, setDarkTheme] = useState(localStorage.getItem('digisafe_theme') === 'dark')
 
   const togglePush = () => {
     const val = !pushNotifs
@@ -1073,6 +1074,18 @@ function SettingsModal({ isOpen, onClose }) {
     const val = !emailAlerts
     setEmailAlerts(val)
     localStorage.setItem('digisafe_alert', val.toString())
+  }
+
+  const toggleTheme = () => {
+    const val = !darkTheme
+    setDarkTheme(val)
+    if (val) {
+      localStorage.setItem('digisafe_theme', 'dark')
+      document.documentElement.setAttribute('data-theme', 'dark')
+    } else {
+      localStorage.removeItem('digisafe_theme')
+      document.documentElement.removeAttribute('data-theme')
+    }
   }
 
   const changeLang = (l) => {
@@ -1093,7 +1106,21 @@ function SettingsModal({ isOpen, onClose }) {
       </div>
       <div className="modal-body" style={{ paddingBottom: 40 }}>
         
-        <div className="label-xs" style={{ marginBottom: 12, marginTop: 10 }}>Notifications</div>
+        <div className="label-xs" style={{ marginBottom: 12, marginTop: 10 }}>Préférences</div>
+        
+        {/* Dark Mode */}
+        <div className="action-row" style={{ alignItems: 'center', padding: '14px 16px', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)', marginBottom: 24 }}>
+          <div style={{ flex: 1 }}>
+            <div className="action-text">Mode Sombre</div>
+            <div className="action-desc" style={{ maxWidth: '90%' }}>Réduit la fatigue visuelle.</div>
+          </div>
+          <label className="toggle-switch">
+            <input type="checkbox" checked={darkTheme} onChange={toggleTheme} />
+            <span className="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div className="label-xs" style={{ marginBottom: 12 }}>Notifications</div>
         
         <div className="action-row" style={{ alignItems: 'center', padding: '14px 16px', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)', marginBottom: 12 }}>
           <div style={{ flex: 1 }}>
@@ -1732,6 +1759,12 @@ function AuthGuard() {
 }
 
 export default function App() {
+  useEffect(() => {
+    if (localStorage.getItem('digisafe_theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark')
+    }
+  }, [])
+
   return (
     <AppProvider>
       <AuthGuard />
