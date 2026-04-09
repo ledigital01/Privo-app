@@ -1077,7 +1077,7 @@ function ProfilePage({ onSecurityClick }) {
 
   const MENU = [
     { icon: <CreditCard size={20} />, label: 'Abonnement & Paiements', desc: `Plan actuel : ${user.plan === 'free' ? 'Gratuit' : user.plan === 'pro' ? 'Pro' : 'Business'}`, path: '/subscription', action: null, color: 'primary' },
-    { icon: <Shield size={20} />, label: 'Sécurité', desc: 'Biométrie, PIN, 2FA', path: null, action: onSecurityClick, color: 'success' },
+    { icon: <Shield size={20} />, label: 'Sécurité', desc: 'Code PIN & Authenticator', path: null, action: onSecurityClick, color: 'success' },
     { icon: <Settings size={20} />, label: 'Paramètres', desc: 'Langue, notifications', path: null, action: showComingSoon, color: 'neutral' },
     { icon: <HelpCircle size={20} />, label: 'Aide & Support', desc: "FAQ, contacter l'équipe", path: null, action: showComingSoon, color: 'neutral' },
     { icon: <LogOut size={20} />, label: 'Déconnexion', desc: null, path: null, action: handleLogout, color: 'danger' },
