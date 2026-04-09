@@ -94,10 +94,17 @@ const Dashboard = ({ onAddClick }) => {
       {/* Quick Action Overlay Section */}
       <section className="bg-gradient-to-br from-[#003d9b] to-[#001848] rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl">
         <div className="relative z-10">
-          <h2 className="font-headline text-2xl font-bold mb-4">Mode Urgence</h2>
-          <p className="text-white/70 mb-6 text-sm">Préparez vos documents critiques pour un accès immédiat en cas d'urgence.</p>
-          <button className="bg-white text-[#003d9b] px-6 py-3 rounded-2xl font-headline font-bold flex items-center gap-2 shadow-xl hover:bg-[#eceef0] transition-colors">
-            Activer l'accès <Plus size={18} />
+          <h2 className="font-headline text-2xl font-bold mb-4 flex items-center gap-2">
+            🚨 Mode Urgence
+          </h2>
+          <p className="text-white/80 mb-6 text-[15px] leading-relaxed">
+            Préparez vos documents critiques pour un accès immédiat.
+          </p>
+          <button 
+            onClick={() => alert("Le Mode Urgence (accès hors-ligne & SOS) sera disponible dans la prochaine mise à jour !")}
+            className="bg-white text-[#003d9b] px-5 py-2.5 rounded-xl font-headline font-bold flex items-center gap-2 shadow-xl hover:bg-[#eceef0] transition-colors active:scale-95"
+          >
+            <Shield size={18} /> Activer l'accès
           </button>
         </div>
         
