@@ -991,7 +991,7 @@ function AppContent() {
         <button
           onClick={() => setModal('CHAT')}
           style={{
-            position: 'absolute', bottom: 90, right: 20, zIndex: 40,
+            position: 'fixed', bottom: 90, right: 20, zIndex: 40,
             width: 56, height: 56, borderRadius: '28px',
             background: 'var(--c-primary)', color: 'white',
             display: 'flex', alignItems: 'center', justifyContent: 'center',

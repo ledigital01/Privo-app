@@ -55,13 +55,13 @@ const Dashboard = ({ onAddClick }) => {
       {/* Summary Cards */}
       <div className="grid grid-cols-3 gap-3">
         {SUMMARY.map((item, idx) => (
-          <div key={idx} className="bg-white p-4 rounded-3xl flex flex-col items-center gap-3 shadow-soft border border-white/50">
-             <div className={`p-2 rounded-xl ${item.color}`}>
-                {item.icon}
+          <div key={idx} className="bg-white p-3 rounded-2xl flex flex-col items-center gap-1.5 shadow-soft border border-white/80 hover:shadow-md transition-shadow">
+             <div className={`p-1.5 rounded-xl ${item.color}`}>
+                {React.cloneElement(item.icon, { size: 16 })}
              </div>
-             <div className="text-center">
-                <div className="text-2xl font-headline font-bold text-[#191c1e]">{item.value}</div>
-                <div className="text-[10px] font-bold uppercase tracking-wider text-[#434654]">{item.label}</div>
+             <div className="text-center mt-1">
+                <div className="text-xl font-headline font-bold text-[#191c1e] leading-tight">{item.value}</div>
+                <div className="text-[9px] font-bold uppercase tracking-wider text-[#434654]">{item.label}</div>
              </div>
           </div>
         ))}
