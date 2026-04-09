@@ -14,8 +14,8 @@ import SubscriptionPage from './pages/SubscriptionPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import './index.css'
-import { supabase } from './utils/supabaseClient'
 import BottomSheet from './components/BottomSheet'
+import { t } from './utils/i18n'
 
 /* ================================================================
    ICON MAP — converts stored string → JSX icon
@@ -50,24 +50,29 @@ const normalizeDate = (dateStr) => {
 function BottomNav({ onAddClick }) {
   const navigate = useNavigate()
   const location = useLocation()
+  const { hasAlerts } = useApp()
   const isActive = (path) => location.pathname === path
 
   return (
     <nav className="bottom-nav">
       <button className={`nav-item${isActive('/') ? ' active' : ''}`} onClick={() => navigate('/')}>
-        <Home size={22} />Accueil
+        <Home size={22} />{t('home')}
       </button>
       <button className={`nav-item${isActive('/documents') ? ' active' : ''}`} onClick={() => navigate('/documents')}>
-        <FolderOpen size={22} />Docs
+        <FolderOpen size={22} />{t('documents')}
       </button>
-      <button className="nav-add-btn" onClick={onAddClick} aria-label="Ajouter un document">
-        <Plus size={26} strokeWidth={2.5} />
+      <button className="nav-fab" onClick={onAddClick}>
+        <div className="fab-inner"><Plus size={28} /></div>
       </button>
       <button className={`nav-item${isActive('/notifications') ? ' active' : ''}`} onClick={() => navigate('/notifications')}>
-        <Bell size={22} />Alertes
+        <div style={{ position: 'relative' }}>
+          <Bell size={22} />
+          {hasAlerts && <span className="notif-badge"></span>}
+        </div>
+        {t('notifications')}
       </button>
       <button className={`nav-item${isActive('/profile') ? ' active' : ''}`} onClick={() => navigate('/profile')}>
-        <User size={22} />Profil
+        <User size={22} />{t('profile')}
       </button>
     </nav>
   )
@@ -544,7 +549,7 @@ function Dashboard({ onAddClick }) {
           onClick={() => navigate('/documents')}
         >
           <Search size={18} color="var(--c-primary-mid)" />
-          <span style={{ color: 'var(--c-text-muted)', fontSize: '0.9rem' }}>Rechercher dans vos documents…</span>
+          <span style={{ color: 'var(--c-text-muted)', fontSize: '0.9rem' }}>Rechercher un document...</span>
         </button>
 
         {/* EMPTY STATE — new user */}
@@ -563,29 +568,29 @@ function Dashboard({ onAddClick }) {
                 <Shield size={36} color="white" />
               </div>
               <h2 style={{ color: 'white', fontSize: '1.3rem', marginBottom: 10, position: 'relative', zIndex: 1 }}>
-                Votre coffre-fort est prêt 🔐
+                {t('my_vault')}
               </h2>
               <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', lineHeight: 1.6, marginBottom: 24, position: 'relative', zIndex: 1 }}>
-                Ajoutez votre premier document sécurisé. Privo le protège avec un chiffrement AES-256.
+                {t('empty_vault')}
               </p>
               <button
                 onClick={() => navigate('/documents')}
                 style={{ background: 'white', color: 'var(--c-primary)', fontFamily: 'Manrope', fontWeight: 800, fontSize: '0.9rem', padding: '12px 28px', borderRadius: 'var(--r-md)', display: 'inline-flex', alignItems: 'center', gap: 8, position: 'relative', zIndex: 1 }}
               >
-                <Plus size={18} /> Explorer la bibliothèque
+                <FolderOpen size={18} /> {t('documents')}
               </button>
             </div>
 
             {/* Quick actions for new user */}
             <div className="section-header" style={{ marginTop: 8 }}>
-              <h2>Par où commencer ?</h2>
+              <h2>{t('where_to_start')}</h2>
             </div>
 
             {[
-              { icon: <User size={22} />, title: "Ajouter ma pièce d'identité", desc: 'CNI, passeport, permis de conduire', color: 'primary' },
-              { icon: <FileText size={22} />, title: 'Importer un contrat', desc: 'Bail, travail, assurance…', color: 'success' },
-              { icon: <CreditCard size={22} />, title: 'Sécuriser mes finances', desc: 'Fiches de paie, relevés bancaires', color: 'warn' },
-              { icon: <GraduationCap size={22} />, title: 'Dossier étudiant', desc: 'Diplômes, relevés, attestations', color: 'primary' },
+              { icon: <User size={22} />, title: t('add_id'), desc: t('add_id_desc'), color: 'primary' },
+              { icon: <FileText size={22} />, title: t('import_contract'), desc: t('import_contract_desc'), color: 'success' },
+              { icon: <CreditCard size={22} />, title: t('secure_finance'), desc: t('secure_finance_desc'), color: 'warn' },
+              { icon: <GraduationCap size={22} />, title: t('student_file'), desc: t('student_file_desc'), color: 'primary' },
             ].map((item, i) => (
               <button
                 key={i}
@@ -616,8 +621,8 @@ function Dashboard({ onAddClick }) {
             }}>
               <ShieldCheck size={18} color="var(--c-primary)" style={{ flexShrink: 0 }} />
               <div>
-                <div style={{ fontFamily: 'Manrope', fontWeight: 700, fontSize: '0.8rem', color: 'var(--c-text)' }}>Données 100% privées et sécurisées</div>
-                <div style={{ fontSize: '0.65rem', color: 'var(--c-text-muted)', marginTop: 2 }}>Chiffrement AES-256 · Aucune revente · RGPD</div>
+                <div style={{ fontFamily: 'Manrope', fontWeight: 700, fontSize: '0.8rem', color: 'var(--c-text)' }}>{t('private_secure')}</div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--c-text-muted)', marginTop: 2 }}>{t('aes_desc')}</div>
               </div>
             </div>
           </div>
@@ -631,7 +636,7 @@ function Dashboard({ onAddClick }) {
                 <div className="stat-card" key={i}>
                   <div className={`icon-wrap sm ${s.type}`} style={{ margin: '0 auto 10px' }}>{s.icon}</div>
                   <div className="value">{s.value}</div>
-                  <div className="label">{s.label}</div>
+                  <div className="label">{s.label === 'Total' ? t('total_docs') : s.label === 'Expirant' ? t('expiring') : t('recent')}</div>
                 </div>
               ))}
             </div>
@@ -1091,6 +1096,7 @@ function SettingsModal({ isOpen, onClose }) {
   const changeLang = (l) => {
     setLang(l)
     localStorage.setItem('digisafe_lang', l)
+    window.location.reload()
   }
 
   if (!isOpen) return null
@@ -1100,19 +1106,19 @@ function SettingsModal({ isOpen, onClose }) {
       <div className="modal-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Settings size={20} color="var(--c-text-muted)" />
-          <h2 className="title-md">Paramètres</h2>
+          <h2 className="title-md">{t('settings')}</h2>
         </div>
         <button className="modal-close-btn" onClick={onClose}><X size={18} /></button>
       </div>
       <div className="modal-body" style={{ paddingBottom: 40 }}>
         
-        <div className="label-xs" style={{ marginBottom: 12, marginTop: 10 }}>Préférences</div>
+        <div className="label-xs" style={{ marginBottom: 12, marginTop: 10 }}>{t('preferences')}</div>
         
         {/* Dark Mode */}
         <div className="action-row" style={{ alignItems: 'center', padding: '14px 16px', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)', marginBottom: 24 }}>
           <div style={{ flex: 1 }}>
-            <div className="action-text">Mode Sombre</div>
-            <div className="action-desc" style={{ maxWidth: '90%' }}>Réduit la fatigue visuelle.</div>
+            <div className="action-text">{t('dark_mode')}</div>
+            <div className="action-desc" style={{ maxWidth: '90%' }}>{t('dark_mode_desc')}</div>
           </div>
           <label className="toggle-switch">
             <input type="checkbox" checked={darkTheme} onChange={toggleTheme} />
@@ -1120,12 +1126,12 @@ function SettingsModal({ isOpen, onClose }) {
           </label>
         </div>
 
-        <div className="label-xs" style={{ marginBottom: 12 }}>Notifications</div>
+        <div className="label-xs" style={{ marginBottom: 12 }}>{t('notifications')}</div>
         
         <div className="action-row" style={{ alignItems: 'center', padding: '14px 16px', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)', marginBottom: 12 }}>
           <div style={{ flex: 1 }}>
-            <div className="action-text">Notifications Push</div>
-            <div className="action-desc" style={{ maxWidth: '90%' }}>Alertes instantanées sur cet appareil.</div>
+            <div className="action-text">{t('push_notifs')}</div>
+            <div className="action-desc" style={{ maxWidth: '90%' }}>{t('push_notifs_desc')}</div>
           </div>
           <label className="toggle-switch">
             <input type="checkbox" checked={pushNotifs} onChange={togglePush} />
@@ -1135,8 +1141,8 @@ function SettingsModal({ isOpen, onClose }) {
 
         <div className="action-row" style={{ alignItems: 'center', padding: '14px 16px', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)', marginBottom: 24 }}>
           <div style={{ flex: 1 }}>
-            <div className="action-text">Rappels par email</div>
-            <div className="action-desc">Expirations de documents.</div>
+            <div className="action-text">{t('email_alerts')}</div>
+            <div className="action-desc">{t('email_alerts_desc')}</div>
           </div>
           <label className="toggle-switch">
             <input type="checkbox" checked={emailAlerts} onChange={toggleAlert} />
@@ -1144,7 +1150,7 @@ function SettingsModal({ isOpen, onClose }) {
           </label>
         </div>
 
-        <div className="label-xs" style={{ marginBottom: 12 }}>Langue de l'application</div>
+        <div className="label-xs" style={{ marginBottom: 12 }}>{t('language')}</div>
         <div style={{ display: 'flex', gap: 12 }}>
           <label style={{ flex: 1, padding: '14px', borderRadius: 'var(--r-md)', border: `1.5px solid ${lang === 'fr' ? 'var(--c-primary)' : 'var(--c-border)'}`, background: 'var(--c-surface-2)', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
              <input type="radio" name="lang" value="fr" checked={lang === 'fr'} onChange={() => changeLang('fr')} style={{ accentColor: 'var(--c-primary)', width: 18, height: 18 }} />
@@ -1182,13 +1188,12 @@ function ProfilePage({ onSecurityClick, onSettingsClick }) {
   }
 
   const MENU = [
-    { icon: <CreditCard size={20} />, label: 'Abonnement & Paiements', desc: `Plan actuel : ${user.plan === 'free' ? 'Gratuit' : user.plan === 'pro' ? 'Pro' : 'Business'}`, path: '/subscription', action: null, color: 'primary' },
-    { icon: <Shield size={20} />, label: 'Sécurité', desc: 'Code PIN & Authenticator', path: null, action: onSecurityClick, color: 'success' },
-    { icon: <Settings size={20} />, label: 'Paramètres', desc: 'Langue, notifications', path: null, action: onSettingsClick, color: 'neutral' },
-    { icon: <HelpCircle size={20} />, label: 'Aide & Support', desc: "FAQ, contacter l'équipe", path: null, action: showComingSoon, color: 'neutral' },
-    { icon: <LogOut size={20} />, label: 'Déconnexion', desc: null, path: null, action: handleLogout, color: 'danger' },
+    { icon: <CreditCard size={20} />, label: t('subscription'), desc: `${t('current_plan')} : ${user.plan === 'free' ? t('free') : user.plan === 'pro' ? 'Pro' : 'Business'}`, path: '/subscription', action: null, color: 'primary' },
+    { icon: <Shield size={20} />, label: t('security'), desc: 'PIN & Authenticator', path: null, action: onSecurityClick, color: 'success' },
+    { icon: <Settings size={20} />, label: t('settings'), desc: 'Lang/Notifications', path: null, action: onSettingsClick, color: 'neutral' },
+    { icon: <HelpCircle size={20} />, label: t('help'), desc: "FAQ/Contact", path: null, action: showComingSoon, color: 'neutral' },
+    { icon: <LogOut size={20} />, label: t('logout'), desc: null, path: null, action: handleLogout, color: 'danger' },
   ]
-
 
   if (loggingOut) {
     return (
@@ -1196,17 +1201,16 @@ function ProfilePage({ onSecurityClick, onSettingsClick }) {
         <div style={{ width: 80, height: 80, borderRadius: 24, background: 'var(--c-danger-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24, animation: 'pulse 1.5s infinite' }}>
           <LogOut size={40} color="var(--c-danger)" />
         </div>
-        <h2 className="title-md">Déconnexion sécurisée</h2>
-        <p className="body-sm" style={{ marginTop: 8, opacity: 0.7 }}>Nous fermons votre coffre-fort numérique...</p>
+        <h2 className="title-md">{t('logout')}</h2>
+        <p className="body-sm" style={{ marginTop: 8, opacity: 0.7 }}>{t('logout_msg')}</p>
         <div style={{ marginTop: 32, width: 40, height: 40, border: '3px solid var(--c-border)', borderTopColor: 'var(--c-danger)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
       </div>
     )
   }
 
-
   return (
     <div className="page-enter">
-      <div className="top-bar"><h1 className="title-lg">Mon Profil</h1></div>
+      <div className="top-bar"><h1 className="title-lg">{t('profile')}</h1></div>
       <div className="page-content" style={{ paddingTop: 8 }}>
 
         <div style={{ background: 'linear-gradient(145deg, var(--c-primary), #0066ff)', borderRadius: 'var(--r-2xl)', padding: '28px 24px', display: 'flex', alignItems: 'center', gap: 18, marginBottom: 28, boxShadow: '0 8px 28px rgba(0,61,155,0.3)' }}>
@@ -1217,13 +1221,13 @@ function ProfilePage({ onSecurityClick, onSettingsClick }) {
             </div>
             <div style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.65)', marginTop: 3 }}>{user.email}</div>
             <span style={{ display: 'inline-block', marginTop: 8, background: 'rgba(255,255,255,0.15)', color: 'white', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '4px 10px', borderRadius: 999 }}>
-              {user.plan === 'free' ? 'Plan Gratuit' : user.plan === 'pro' ? 'Plan Pro ⚡' : 'Business 👑'}
+              {user.plan === 'free' ? t('free') : user.plan === 'pro' ? 'Pro ⚡' : 'Business 👑'}
             </span>
           </div>
         </div>
 
         <div style={{ display: 'flex', gap: 10, marginBottom: 28 }}>
-          {[{ v: `${stats.total}/5`, l: 'Documents' }, { v: stats.expiringSoon, l: 'Expirant' }, { v: stats.recent, l: 'Récents' }].map((s, i) => (
+          {[{ v: `${stats.total}/5`, l: t('docs_count') }, { v: stats.expiringSoon, l: t('expiring') }, { v: stats.recent, l: t('recent') }].map((s, i) => (
             <div key={i} className="stat-card">
               <div className="value" style={{ fontSize: '1.3rem' }}>{s.v}</div>
               <div className="label">{s.l}</div>
@@ -1231,7 +1235,7 @@ function ProfilePage({ onSecurityClick, onSettingsClick }) {
           ))}
         </div>
 
-        <div className="section-header"><h2>Mon compte</h2></div>
+        <div className="section-header"><h2>{t('my_account')}</h2></div>
         <div className="space-y-3" style={{ marginBottom: 40 }}>
           {MENU.map((item, i) => (
             <button key={i} onClick={() => item.action ? item.action() : item.path && navigate(item.path)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 16, background: 'var(--c-surface)', borderRadius: 'var(--r-lg)', padding: '16px 18px', border: '1.5px solid var(--c-border)', boxShadow: 'var(--shadow-xs)', cursor: (item.path || item.action) ? 'pointer' : 'default', textAlign: 'left' }}>
@@ -1620,8 +1624,8 @@ function AppLockScreen({ children }) {
           <div style={{ width: 60, height: 60, borderRadius: 20, background: 'var(--c-success-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
             <ShieldCheck size={32} color="var(--c-success)" />
           </div>
-          <h2 className="title-md">Sécurisez votre appareil</h2>
-          <p className="body-sm" style={{ marginTop: 8 }}>Veuillez créer un code PIN à 4 chiffres pour protéger l'accès à vos documents confidentiels.</p>
+          <h2 className="title-md">{t('setup_pin_title')}</h2>
+          <p className="body-sm" style={{ marginTop: 8 }}>{t('setup_pin_desc')}</p>
         </div>
 
         <div style={{ display: 'flex', gap: 16, marginTop: 40, marginBottom: 40 }}>
@@ -1655,8 +1659,8 @@ function AppLockScreen({ children }) {
         <div style={{ width: 60, height: 60, borderRadius: 20, background: 'var(--c-primary-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
           <ShieldCheck size={32} color="var(--c-primary)" />
         </div>
-        <h2 className="title-md">Vérification 2FA</h2>
-        <p className="body-sm" style={{ marginTop: 8, textAlign: 'center', marginBottom: 40 }}>Saisissez le code à 6 chiffres généré par votre application Authenticator.</p>
+        <h2 className="title-md">{t('tfa_title')}</h2>
+        <p className="body-sm" style={{ marginTop: 8, textAlign: 'center', marginBottom: 40 }}>{t('tfa_desc')}</p>
         
         <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 20, transform: errorShake ? 'translateX(-10px)' : 'none', transition: 'transform 0.1s' }} className={errorShake ? 'shake-animation' : ''} onClick={() => document.getElementById('hiddenTfaLockInput').focus()}>
           {[0, 1, 2, 3, 4, 5].map(i => (
@@ -1692,7 +1696,7 @@ function AppLockScreen({ children }) {
         />
         
         <button className="btn-primary w-full" style={{ maxWidth: 280, marginTop: 20 }} onClick={handle2faVerify} disabled={tfaInput.length !== 6}>
-          Déverrouiller
+          {t('unlock')}
         </button>
       </div>
     )
@@ -1705,8 +1709,8 @@ function AppLockScreen({ children }) {
         <div style={{ width: 60, height: 60, borderRadius: 20, background: 'var(--c-primary-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
           <ShieldCheck size={32} color="var(--c-primary)" />
         </div>
-        <h2 className="title-md">DigiSAFE verrouillé</h2>
-        <p className="body-sm" style={{ marginTop: 8 }}>Saisissez votre code PIN pour accéder à vos documents.</p>
+        <h2 className="title-md">{t('locked_title')}</h2>
+        <p className="body-sm" style={{ marginTop: 8 }}>{t('locked_desc')}</p>
       </div>
 
       <div style={{ display: 'flex', gap: 16, marginTop: 40, marginBottom: 40, transform: errorShake ? 'translateX(-10px)' : 'none', transition: 'transform 0.1s' }} className={errorShake ? 'shake-animation' : ''}>
