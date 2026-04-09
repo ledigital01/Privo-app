@@ -1069,16 +1069,30 @@ function SettingsModal({ isOpen, onClose }) {
   const [emailAlerts, setEmailAlerts] = useState(localStorage.getItem('digisafe_alert') !== 'false')
   const [darkTheme, setDarkTheme] = useState(localStorage.getItem('digisafe_theme') === 'dark')
 
-  const togglePush = () => {
+  const togglePush = async () => {
     const val = !pushNotifs
     setPushNotifs(val)
     localStorage.setItem('digisafe_push', val.toString())
+    
+    if (val && 'Notification' in window) {
+      const permission = await Notification.requestPermission()
+      if (permission === 'granted') {
+        new Notification("DigiSAFE", {
+          body: lang === 'en' ? "Push notifications are now enabled!" : "Les notifications Push sont activées !",
+          icon: "/digisafe_official_logo_1775050111054.png"
+        })
+      }
+    }
   }
   
   const toggleAlert = () => {
     const val = !emailAlerts
     setEmailAlerts(val)
     localStorage.setItem('digisafe_alert', val.toString())
+    
+    if (val) {
+      alert(lang === 'en' ? "Email reminders are now active. You will receive alerts when documents expire." : "Rappels emails activés. Vous recevrez une alerte avant d'expiration d'un document.")
+    }
   }
 
   const toggleTheme = () => {
