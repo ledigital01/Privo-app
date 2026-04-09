@@ -15,6 +15,7 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import './index.css'
 import { supabase } from './utils/supabaseClient'
+import BottomSheet from './components/BottomSheet'
 
 /* ================================================================
    ICON MAP — converts stored string → JSX icon
@@ -113,9 +114,7 @@ function EditDocumentModal({ isOpen, onClose, doc }) {
   if (!isOpen || !doc) return null
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-sheet" onClick={e => e.stopPropagation()}>
-        <div className="modal-handle" />
+    <BottomSheet isOpen={isOpen} onClose={onClose} height="auto">
         <div className="modal-header">
           <h2 className="title-md">Modifier le document</h2>
           <button className="modal-close-btn" onClick={onClose}><X size={18} /></button>
@@ -176,8 +175,7 @@ function EditDocumentModal({ isOpen, onClose, doc }) {
             <Check size={20} /> Appliquer les modifications
           </button>
         </div>
-      </div>
-    </div>
+    </BottomSheet>
   )
 }
 
@@ -278,9 +276,8 @@ function IAScanModal({ isOpen, onClose }) {
   if (!isOpen) return null
 
   return (
-    <div className="modal-overlay" onClick={handleClose}>
-      <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: '92vh' }}>
-        <div className="modal-handle" />
+    <BottomSheet isOpen={isOpen} onClose={handleClose} maxHeight="92vh">
+
 
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -423,8 +420,7 @@ function IAScanModal({ isOpen, onClose }) {
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </BottomSheet>
   )
 }
 
@@ -434,9 +430,8 @@ function IAScanModal({ isOpen, onClose }) {
 function DeleteModal({ isOpen, doc, onClose, onConfirm }) {
   if (!isOpen || !doc) return null
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: '40vh' }}>
-        <div className="modal-handle" />
+    <BottomSheet isOpen={isOpen} onClose={onClose} maxHeight="40vh">
+
         <div className="modal-body" style={{ paddingTop: 24, alignItems: 'center', textAlign: 'center', gap: 16 }}>
           <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'var(--c-danger-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
             <Trash2 size={28} color="var(--c-danger)" />
@@ -460,8 +455,7 @@ function DeleteModal({ isOpen, doc, onClose, onConfirm }) {
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </BottomSheet>
   )
 }
 
@@ -471,9 +465,7 @@ function DeleteModal({ isOpen, doc, onClose, onConfirm }) {
 function QuickShareModal({ isOpen, onClose }) {
   if (!isOpen) return null
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-sheet" onClick={e => e.stopPropagation()}>
-        <div className="modal-handle" />
+    <BottomSheet isOpen={isOpen} onClose={onClose} height="auto">
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Share2 size={20} color="var(--c-primary)" />
@@ -512,8 +504,7 @@ function QuickShareModal({ isOpen, onClose }) {
           </div>
           <button className="btn-secondary mt-4" onClick={onClose}>Fermer</button>
         </div>
-      </div>
-    </div>
+    </BottomSheet>
   )
 }
 
