@@ -1056,9 +1056,88 @@ function SecuritySettingsModal({ isOpen, onClose }) {
 }
 
 /* ================================================================
+   MODAL — SETTINGS
+   ================================================================ */
+function SettingsModal({ isOpen, onClose }) {
+  const [lang, setLang] = useState(localStorage.getItem('digisafe_lang') || 'fr')
+  const [pushNotifs, setPushNotifs] = useState(localStorage.getItem('digisafe_push') !== 'false')
+  const [emailAlerts, setEmailAlerts] = useState(localStorage.getItem('digisafe_alert') !== 'false')
+
+  const togglePush = () => {
+    const val = !pushNotifs
+    setPushNotifs(val)
+    localStorage.setItem('digisafe_push', val.toString())
+  }
+  
+  const toggleAlert = () => {
+    const val = !emailAlerts
+    setEmailAlerts(val)
+    localStorage.setItem('digisafe_alert', val.toString())
+  }
+
+  const changeLang = (l) => {
+    setLang(l)
+    localStorage.setItem('digisafe_lang', l)
+  }
+
+  if (!isOpen) return null
+
+  return (
+    <BottomSheet isOpen={isOpen} onClose={onClose} height="auto">
+      <div className="modal-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Settings size={20} color="var(--c-text-muted)" />
+          <h2 className="title-md">Paramètres</h2>
+        </div>
+        <button className="modal-close-btn" onClick={onClose}><X size={18} /></button>
+      </div>
+      <div className="modal-body" style={{ paddingBottom: 40 }}>
+        
+        <div className="label-xs" style={{ marginBottom: 12, marginTop: 10 }}>Notifications</div>
+        
+        <div className="action-row" style={{ alignItems: 'center', padding: '14px 16px', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)', marginBottom: 12 }}>
+          <div style={{ flex: 1 }}>
+            <div className="action-text">Notifications Push</div>
+            <div className="action-desc" style={{ maxWidth: '90%' }}>Alertes instantanées sur cet appareil.</div>
+          </div>
+          <label className="toggle-switch">
+            <input type="checkbox" checked={pushNotifs} onChange={togglePush} />
+            <span className="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div className="action-row" style={{ alignItems: 'center', padding: '14px 16px', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)', marginBottom: 24 }}>
+          <div style={{ flex: 1 }}>
+            <div className="action-text">Rappels par email</div>
+            <div className="action-desc">Expirations de documents.</div>
+          </div>
+          <label className="toggle-switch">
+            <input type="checkbox" checked={emailAlerts} onChange={toggleAlert} />
+            <span className="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div className="label-xs" style={{ marginBottom: 12 }}>Langue de l'application</div>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <label style={{ flex: 1, padding: '14px', borderRadius: 'var(--r-md)', border: `1.5px solid ${lang === 'fr' ? 'var(--c-primary)' : 'var(--c-border)'}`, background: 'var(--c-surface-2)', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+             <input type="radio" name="lang" value="fr" checked={lang === 'fr'} onChange={() => changeLang('fr')} style={{ accentColor: 'var(--c-primary)', width: 18, height: 18 }} />
+             <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--c-text)' }}>Français</span>
+          </label>
+          <label style={{ flex: 1, padding: '14px', borderRadius: 'var(--r-md)', border: `1.5px solid ${lang === 'en' ? 'var(--c-primary)' : 'var(--c-border)'}`, background: 'var(--c-surface-2)', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+             <input type="radio" name="lang" value="en" checked={lang === 'en'} onChange={() => changeLang('en')} style={{ accentColor: 'var(--c-primary)', width: 18, height: 18 }} />
+             <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--c-text)' }}>English</span>
+          </label>
+        </div>
+
+      </div>
+    </BottomSheet>
+  )
+}
+
+/* ================================================================
    PAGE — PROFILE (dynamic user data)
    ================================================================ */
-function ProfilePage({ onSecurityClick }) {
+function ProfilePage({ onSecurityClick, onSettingsClick }) {
   const { authUser, stats, logout } = useApp()
   const navigate = useNavigate()
   const user = authUser || {}
@@ -1078,7 +1157,7 @@ function ProfilePage({ onSecurityClick }) {
   const MENU = [
     { icon: <CreditCard size={20} />, label: 'Abonnement & Paiements', desc: `Plan actuel : ${user.plan === 'free' ? 'Gratuit' : user.plan === 'pro' ? 'Pro' : 'Business'}`, path: '/subscription', action: null, color: 'primary' },
     { icon: <Shield size={20} />, label: 'Sécurité', desc: 'Code PIN & Authenticator', path: null, action: onSecurityClick, color: 'success' },
-    { icon: <Settings size={20} />, label: 'Paramètres', desc: 'Langue, notifications', path: null, action: showComingSoon, color: 'neutral' },
+    { icon: <Settings size={20} />, label: 'Paramètres', desc: 'Langue, notifications', path: null, action: onSettingsClick, color: 'neutral' },
     { icon: <HelpCircle size={20} />, label: 'Aide & Support', desc: "FAQ, contacter l'équipe", path: null, action: showComingSoon, color: 'neutral' },
     { icon: <LogOut size={20} />, label: 'Déconnexion', desc: null, path: null, action: handleLogout, color: 'danger' },
   ]
@@ -1172,7 +1251,7 @@ function AppContent() {
           <Route path="/documents" element={<Library onDocClick={handleDocClick} />} />
           <Route path="/detail" element={<DocumentDetail doc={selectedDoc} onBack={() => navigate(-1)} onShare={() => setModal('SHARE')} onDeleteRequest={handleDeleteRequest} onEditRequest={() => setModal('EDIT')} />} />
           <Route path="/notifications" element={<NotificationsPage onDocClick={handleDocClick} />} />
-          <Route path="/profile" element={<ProfilePage onSecurityClick={() => setModal('SECURITY')} />} />
+          <Route path="/profile" element={<ProfilePage onSecurityClick={() => setModal('SECURITY')} onSettingsClick={() => setModal('SETTINGS')} />} />
           <Route path="/subscription" element={<SubscriptionPage onBack={() => navigate(-1)} />} />
         </Routes>
         <BottomNav onAddClick={() => setModal('SCAN')} />
@@ -1197,6 +1276,7 @@ function AppContent() {
       <DeleteModal isOpen={modal === 'DELETE'} onClose={() => setModal(null)} onConfirm={handleDeleteConfirm} doc={selectedDoc} />
       <QuickShareModal isOpen={modal === 'SHARE'} onClose={() => setModal(null)} />
       <SecuritySettingsModal isOpen={modal === 'SECURITY'} onClose={() => setModal(null)} />
+      <SettingsModal isOpen={modal === 'SETTINGS'} onClose={() => setModal(null)} />
       <AIChatModal isOpen={modal === 'CHAT'} onClose={() => setModal(null)} />
     </>
   )
