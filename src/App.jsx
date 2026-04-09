@@ -803,8 +803,18 @@ function Library({ onDocClick }) {
    PAGE — DOCUMENT DETAIL (with real delete)
    ================================================================ */
 function DocumentDetail({ doc, onBack, onShare, onDeleteRequest, onEditRequest }) {
+  const [isRevealed, setIsRevealed] = useState(false)
   if (!doc) return null
   const status = getDocStatus(doc.expiresAt)
+
+  // Images dynamiques pour simuler le document réel selon la catégorie
+  const simulationImages = {
+    'Identité': 'https://images.unsplash.com/photo-1590451381395-5eeab45f63d0?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+    'Finance': 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+    'Santé': 'https://images.unsplash.com/photo-1584308666744-24d59b298b90?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+    'Contrat': 'https://images.unsplash.com/photo-1589829085413-56de8ae18c73?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'
+  }
+  const previewImg = simulationImages[doc.type] || 'https://images.unsplash.com/photo-1618044733300-9472054094ee?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'
 
   return (
     <div className="page-enter">
@@ -815,15 +825,27 @@ function DocumentDetail({ doc, onBack, onShare, onDeleteRequest, onEditRequest }
       </div>
 
       <div className="page-content" style={{ paddingTop: 8 }}>
-        <div className="doc-preview card-lg" style={{ marginBottom: 20 }}>
-          <div className={`icon-wrap lg ${status === 'warn' ? 'warn' : 'primary'}`}>{getIcon(doc.iconName, 30)}</div>
-          <span className="label-xs">{t('secure_preview')}</span>
-          <div style={{ position: 'absolute', top: 12, right: 12 }}>
-            {status === 'ok'
-              ? <span className="badge success"><ShieldCheck size={11} /> {t('secure_badge')}</span>
-              : <span className="badge warn"><AlertCircle size={11} /> {t('warning_badge')}</span>
-            }
-          </div>
+        <div 
+          className="doc-preview card-lg" 
+          style={{ marginBottom: 20, cursor: 'pointer', backgroundImage: isRevealed ? `url(${previewImg})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', transition: 'background 0.3s ease' }}
+          onPointerDown={() => setIsRevealed(true)}
+          onPointerUp={() => setIsRevealed(false)}
+          onPointerLeave={() => setIsRevealed(false)}
+          onContextMenu={e => e.preventDefault()}
+        >
+          {!isRevealed && (
+            <>
+              <div className={`icon-wrap lg ${status === 'warn' ? 'warn' : 'primary'}`}>{getIcon(doc.iconName, 30)}</div>
+              <span className="label-xs">{t('secure_preview')}</span>
+              <span className="body-sm" style={{ fontSize: '0.65rem', marginTop: -6, opacity: 0.6 }}>Maintenir pour révéler</span>
+              <div style={{ position: 'absolute', top: 12, right: 12 }}>
+                {status === 'ok'
+                  ? <span className="badge success"><ShieldCheck size={11} /> {t('secure_badge')}</span>
+                  : <span className="badge warn"><AlertCircle size={11} /> {t('warning_badge')}</span>
+                }
+              </div>
+            </>
+          )}
         </div>
 
         <h1 className="title-lg" style={{ marginBottom: 6 }}>{doc.title}</h1>
