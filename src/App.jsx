@@ -16,6 +16,7 @@ import RegisterPage from './pages/RegisterPage'
 import './index.css'
 import BottomSheet from './components/BottomSheet'
 import { t } from './utils/i18n'
+import { supabase } from './utils/supabaseClient'
 
 /* ================================================================
    ICON MAP — converts stored string → JSX icon
