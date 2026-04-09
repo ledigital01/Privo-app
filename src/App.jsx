@@ -863,42 +863,11 @@ function DocumentDetail({ doc, onBack, onShare, onDeleteRequest, onEditRequest }
    ================================================================ */
 function SecuritySettingsModal({ isOpen, onClose }) {
   const [usePin, setUsePin] = useState(!!localStorage.getItem('digisafe_pin'))
-  const [useBiometrics, setUseBiometrics] = useState(!!localStorage.getItem('digisafe_bio'))
   const [use2fa, setUse2fa] = useState(!!localStorage.getItem('digisafe_2fa'))
 
   const [setupStep, setSetupStep] = useState(null) // 'PIN', '2FA', null
   const [pinInput, setPinInput] = useState('')
   const [tfaInput, setTfaInput] = useState('')
-
-  const handleBiometricsToggle = async () => {
-    if (!useBiometrics) {
-      try {
-        if (window.PublicKeyCredential) {
-          const challenge = new Uint8Array(32);
-          crypto.getRandomValues(challenge);
-          await navigator.credentials.create({
-            publicKey: {
-              challenge: challenge,
-              rp: { name: "DigiSAFE" },
-              user: { id: new Uint8Array(16), name: "user", displayName: "Utilisateur" },
-              pubKeyCredParams: [{ type: "public-key", alg: -7 }],
-              authenticatorSelection: { userVerification: "required" },
-              timeout: 60000
-            }
-          });
-          setUseBiometrics(true)
-          localStorage.setItem('digisafe_bio', 'true')
-        } else {
-          alert("Votre navigateur ou appareil ne supporte pas la biométrie (WebAuthn).");
-        }
-      } catch (err) {
-        alert("Face ID / Touch ID annulé ou non disponible sur cet appareil.\n\nAssurez-vous d'être sur HTTPS ou d'avoir un capteur configuré.");
-      }
-    } else {
-      setUseBiometrics(false)
-      localStorage.removeItem('digisafe_bio')
-    }
-  }
 
   const handlePinToggle = () => {
     if (usePin) {
@@ -972,18 +941,6 @@ function SecuritySettingsModal({ isOpen, onClose }) {
               </label>
             </div>
 
-            {/* Biometrics */}
-            <div className="action-row" style={{ alignItems: 'center', padding: '14px 16px', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)' }}>
-              <div style={{ flex: 1 }}>
-                <div className="action-text">Face ID / Touch ID</div>
-                <div className="action-desc">Déverrouillage instantané.</div>
-              </div>
-              <label className="toggle-switch">
-                <input type="checkbox" checked={useBiometrics} onChange={handleBiometricsToggle} />
-                <span className="toggle-slider"></span>
-              </label>
-            </div>
-            
             {/* 2FA */}
             <div className="action-row" style={{ alignItems: 'center', padding: '14px 16px', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)' }}>
               <div style={{ flex: 1 }}>
