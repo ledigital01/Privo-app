@@ -740,13 +740,13 @@ input:checked + .toggle-slider:before {
 
 .doc-card-title {
   font-family: 'Manrope', sans-serif;
-  font-size: 0.95rem;
-  font-weight: 700;
+  font-size: 0.85rem;
+  font-weight: 600;
   color: var(--c-text);
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
 }
 
@@ -797,10 +797,15 @@ input:checked + .toggle-slider:before {
 }
 
 .insight-card .insight-body {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   color: var(--c-text-muted);
-  line-height: 1.5;
+  line-height: 1.4;
   margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .insight-link {
