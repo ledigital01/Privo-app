@@ -1444,15 +1444,18 @@ function AppLockScreen({ children }) {
   const saved2fa = localStorage.getItem('digisafe_2fa')
   
   const [authStage, setAuthStage] = useState(() => {
-    if (savedPin) return 'PIN'
+    if (!savedPin) return 'SETUP_PIN'
     if (saved2fa) return '2FA'
-    return 'UNLOCKED'
+    return 'PIN' // si PIN existe mais pas 2FA
   })
 
   // PIN state
   const [pinInput, setPinInput] = useState('')
   const [errorShake, setErrorShake] = useState(false)
   
+  // SETUP PIN state
+  const [setupPinInput, setSetupPinInput] = useState('')
+
   // 2FA state
   const [tfaInput, setTfaInput] = useState('')
 
@@ -1477,7 +1480,22 @@ function AppLockScreen({ children }) {
     }
   }
 
+  const handleSetupPinChar = (char) => {
+    if (setupPinInput.length < 4) {
+      const newPin = setupPinInput + char
+      setSetupPinInput(newPin)
+      if (newPin.length === 4) {
+        setTimeout(() => {
+          localStorage.setItem('digisafe_pin', newPin)
+          if (saved2fa) setAuthStage('2FA')
+          else setAuthStage('UNLOCKED')
+        }, 500)
+      }
+    }
+  }
+
   const handleDelete = () => setPinInput(prev => prev.slice(0, -1))
+  const handleDeleteSetup = () => setSetupPinInput(prev => prev.slice(0, -1))
 
   const handle2faVerify = () => {
     if (tfaInput.length === 6) {
@@ -1486,6 +1504,42 @@ function AppLockScreen({ children }) {
       setErrorShake(true)
       setTimeout(() => setErrorShake(false), 500)
     }
+  }
+
+  if (authStage === 'SETUP_PIN') {
+    return (
+      <div style={{ height: '100dvh', background: 'var(--c-bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, position: 'relative' }}>
+        <div style={{ position: 'absolute', top: 60, textAlign: 'center' }}>
+          <div style={{ width: 60, height: 60, borderRadius: 20, background: 'var(--c-success-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <ShieldCheck size={32} color="var(--c-success)" />
+          </div>
+          <h2 className="title-md">Sécurisez votre appareil</h2>
+          <p className="body-sm" style={{ marginTop: 8 }}>Veuillez créer un code PIN à 4 chiffres pour protéger l'accès à vos documents confidentiels.</p>
+        </div>
+
+        <div style={{ display: 'flex', gap: 16, marginTop: 40, marginBottom: 40 }}>
+          {[0, 1, 2, 3].map(i => (
+            <div key={i} style={{ 
+              width: 20, height: 20, borderRadius: '50%',
+              background: setupPinInput.length > i ? 'var(--c-success)' : 'var(--c-border)',
+              transition: 'background 0.2s',
+              boxShadow: setupPinInput.length > i ? '0 0 10px rgba(10, 191, 83, 0.4)' : 'none'
+            }} />
+          ))}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px 24px', width: '100%', maxWidth: 300, marginTop: 'auto', marginBottom: 40 }}>
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+            <button key={num} onClick={() => handleSetupPinChar(num.toString())} style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--c-surface)', border: 'none', fontSize: 28, fontWeight: 600, color: 'var(--c-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', cursor: 'pointer', boxShadow: 'var(--shadow-sm)' }}>
+              {num}
+            </button>
+          ))}
+          <div />
+          <button onClick={() => handleSetupPinChar('0')} style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--c-surface)', border: 'none', fontSize: 28, fontWeight: 600, color: 'var(--c-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', cursor: 'pointer', boxShadow: 'var(--shadow-sm)' }}>0</button>
+          <button onClick={handleDeleteSetup} style={{ width: 72, height: 72, borderRadius: '50%', background: 'transparent', border: 'none', color: 'var(--c-text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', cursor: 'pointer' }}><X size={32} /></button>
+        </div>
+      </div>
+    )
   }
 
   if (authStage === '2FA') {
