@@ -1483,19 +1483,23 @@ function NotificationsPage({ onDocClick }) {
    APP LOCK SCREEN - Checks PIN/Biometry before AppContent
    ================================================================ */
 function AppLockScreen({ children }) {
-  const [unlocked, setUnlocked] = useState(false)
+  const savedPin = localStorage.getItem('digisafe_pin')
+  const saved2fa = localStorage.getItem('digisafe_2fa')
+  
+  const [authStage, setAuthStage] = useState(() => {
+    if (savedPin) return 'PIN'
+    if (saved2fa) return '2FA'
+    return 'UNLOCKED'
+  })
+
+  // PIN state
   const [pinInput, setPinInput] = useState('')
   const [errorShake, setErrorShake] = useState(false)
-
-  const savedPin = localStorage.getItem('digisafe_pin')
   
-  useEffect(() => {
-    if (!savedPin) {
-      setUnlocked(true)
-    }
-  }, [savedPin])
+  // 2FA state
+  const [tfaInput, setTfaInput] = useState('')
 
-  if (unlocked) return children
+  if (authStage === 'UNLOCKED') return children
 
   const handlePinChar = (char) => {
     if (pinInput.length < 4) {
@@ -1503,10 +1507,11 @@ function AppLockScreen({ children }) {
       setPinInput(newPin)
       if (newPin.length === 4) {
         if (newPin === savedPin) {
-           // Succès
-           setTimeout(() => setUnlocked(true), 200)
+           setTimeout(() => {
+             if (saved2fa) setAuthStage('2FA')
+             else setAuthStage('UNLOCKED')
+           }, 200)
         } else {
-           // Erreur
            setErrorShake(true)
            if (window.navigator.vibrate) window.navigator.vibrate([100, 100, 100])
            setTimeout(() => { setErrorShake(false); setPinInput('') }, 500)
@@ -1517,6 +1522,65 @@ function AppLockScreen({ children }) {
 
   const handleDelete = () => setPinInput(prev => prev.slice(0, -1))
 
+  const handle2faVerify = () => {
+    if (tfaInput.length === 6) {
+      setAuthStage('UNLOCKED')
+    } else {
+      setErrorShake(true)
+      setTimeout(() => setErrorShake(false), 500)
+    }
+  }
+
+  if (authStage === '2FA') {
+    return (
+      <div style={{ height: '100dvh', background: 'var(--c-bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div style={{ width: 60, height: 60, borderRadius: 20, background: 'var(--c-primary-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+          <ShieldCheck size={32} color="var(--c-primary)" />
+        </div>
+        <h2 className="title-md">Vérification 2FA</h2>
+        <p className="body-sm" style={{ marginTop: 8, textAlign: 'center', marginBottom: 40 }}>Saisissez le code à 6 chiffres généré par votre application Authenticator.</p>
+        
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 20, transform: errorShake ? 'translateX(-10px)' : 'none', transition: 'transform 0.1s' }} className={errorShake ? 'shake-animation' : ''} onClick={() => document.getElementById('hiddenTfaLockInput').focus()}>
+          {[0, 1, 2, 3, 4, 5].map(i => (
+            <div key={i} style={{ 
+              width: 44, height: 50, borderRadius: 'var(--r-sm)', 
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'var(--c-surface)', border: `1.5px solid ${tfaInput.length === i ? 'var(--c-primary)' : 'var(--c-border)'}`,
+              fontSize: 24, fontWeight: 700, color: 'var(--c-text)',
+              boxShadow: tfaInput.length === i ? 'var(--shadow-xs)' : 'none',
+              position: 'relative'
+            }}>
+              {tfaInput[i] || ''}
+              {tfaInput.length === i && <div className="blink-cursor" style={{ position: 'absolute', width: 2, height: 26, background: 'var(--c-primary)', borderRadius: 2 }} />}
+            </div>
+          ))}
+        </div>
+        
+        <input 
+          id="hiddenTfaLockInput"
+          type="tel" 
+          inputMode="numeric"
+          maxLength={6} 
+          autoFocus
+          value={tfaInput} 
+          onChange={e => {
+             const val = e.target.value.replace(/[^0-9]/g, '')
+             setTfaInput(val)
+             if (val.length === 6) setTimeout(() => {
+                setAuthStage('UNLOCKED')
+             }, 300)
+          }}
+          style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }} 
+        />
+        
+        <button className="btn-primary w-full" style={{ maxWidth: 280, marginTop: 20 }} onClick={handle2faVerify} disabled={tfaInput.length !== 6}>
+          Déverrouiller
+        </button>
+      </div>
+    )
+  }
+
+  // PIN Stage
   return (
     <div style={{ height: '100dvh', background: 'var(--c-bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, position: 'relative' }}>
       <div style={{ position: 'absolute', top: 60, textAlign: 'center' }}>
@@ -1538,7 +1602,6 @@ function AppLockScreen({ children }) {
         ))}
       </div>
 
-      {/* Numpad */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px 24px', width: '100%', maxWidth: 300, marginTop: 'auto', marginBottom: 40 }}>
         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
           <button key={num} onClick={() => handlePinChar(num.toString())} style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--c-surface)', border: 'none', fontSize: 28, fontWeight: 600, color: 'var(--c-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', cursor: 'pointer', boxShadow: 'var(--shadow-sm)' }}>
