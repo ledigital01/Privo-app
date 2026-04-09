@@ -862,96 +862,189 @@ function DocumentDetail({ doc, onBack, onShare, onDeleteRequest, onEditRequest }
    MODAL — SECURITY SETTINGS
    ================================================================ */
 function SecuritySettingsModal({ isOpen, onClose }) {
-  const [usePin, setUsePin] = useState(false)
-  const [useBiometrics, setUseBiometrics] = useState(false)
-  const [use2fa, setUse2fa] = useState(false)
+  const [usePin, setUsePin] = useState(!!localStorage.getItem('digisafe_pin'))
+  const [useBiometrics, setUseBiometrics] = useState(!!localStorage.getItem('digisafe_bio'))
+  const [use2fa, setUse2fa] = useState(!!localStorage.getItem('digisafe_2fa'))
+
+  const [setupStep, setSetupStep] = useState(null) // 'PIN', '2FA', null
+  const [pinInput, setPinInput] = useState('')
+  const [tfaInput, setTfaInput] = useState('')
 
   const handleBiometricsToggle = async () => {
     if (!useBiometrics) {
       try {
-        // Simulation d'une demande WebAuthn pour déclencher l'interface native (FaceID / TouchID)
-        // Ceci simule juste la création d'une clé locale pour valider la biométrie
         if (window.PublicKeyCredential) {
           const challenge = new Uint8Array(32);
           crypto.getRandomValues(challenge);
-          
           await navigator.credentials.create({
             publicKey: {
               challenge: challenge,
               rp: { name: "DigiSAFE" },
-              user: {
-                id: new Uint8Array(16),
-                name: "user@digisafe.app",
-                displayName: "Utilisateur"
-              },
-              pubKeyCredParams: [{ type: "public-key", alg: -7 }], // ES256
+              user: { id: new Uint8Array(16), name: "user", displayName: "Utilisateur" },
+              pubKeyCredParams: [{ type: "public-key", alg: -7 }],
               authenticatorSelection: { userVerification: "required" },
               timeout: 60000
             }
           });
           setUseBiometrics(true)
+          localStorage.setItem('digisafe_bio', 'true')
         } else {
-          alert("Votre navigateur ne supporte pas la biométrie avancée.");
+          alert("Votre navigateur ou appareil ne supporte pas la biométrie (WebAuthn).");
         }
       } catch (err) {
-        console.log("Biométrie annulée ou erreur", err)
-        // L'utilisateur a refusé ou annulé le FaceID
+        alert("Face ID / Touch ID annulé ou non disponible sur cet appareil.\n\nAssurez-vous d'être sur HTTPS ou d'avoir un capteur configuré.");
       }
     } else {
       setUseBiometrics(false)
+      localStorage.removeItem('digisafe_bio')
+    }
+  }
+
+  const handlePinToggle = () => {
+    if (usePin) {
+      setUsePin(false)
+      localStorage.removeItem('digisafe_pin')
+    } else {
+      setSetupStep('PIN')
+      setPinInput('')
+    }
+  }
+
+  const handle2faToggle = () => {
+    if (use2fa) {
+      setUse2fa(false)
+      localStorage.removeItem('digisafe_2fa')
+    } else {
+      setSetupStep('2FA')
+      setTfaInput('')
+    }
+  }
+
+  const savePin = () => {
+    if (pinInput.length === 4) {
+      localStorage.setItem('digisafe_pin', pinInput)
+      setUsePin(true)
+      setSetupStep(null)
+    } else {
+      alert("Le code PIN doit faire 4 chiffres.")
+    }
+  }
+
+  const save2fa = () => {
+    if (tfaInput.length === 6) {
+      localStorage.setItem('digisafe_2fa', 'true')
+      setUse2fa(true)
+      setSetupStep(null)
+    } else {
+      alert("Le code Authenticator doit faire 6 chiffres.")
     }
   }
 
   if (!isOpen) return null
+
   return (
-    <BottomSheet isOpen={isOpen} onClose={onClose} height="auto">
+    <BottomSheet isOpen={isOpen} onClose={() => { setSetupStep(null); onClose(); }} height="auto">
       <div className="modal-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Shield size={20} color="var(--c-success)" />
-          <h2 className="title-md">Sécurité Locale</h2>
+          <h2 className="title-md">{setupStep ? 'Configuration' : 'Sécurité Locale'}</h2>
         </div>
-        <button className="modal-close-btn" onClick={onClose}><X size={18} /></button>
+        <button className="modal-close-btn" onClick={() => { setSetupStep(null); onClose(); }}><X size={18} /></button>
       </div>
+
       <div className="modal-body" style={{ paddingBottom: 40 }}>
-        <p className="body-sm" style={{ marginBottom: 10, color: 'var(--c-text-muted)' }}>
-          Ajoutez une couche de protection supplémentaire pour déverrouiller l'accès à ce coffre-fort numérique sur cet appareil.
-        </p>
-
-        {/* PIN Code */}
-        <div className="action-row" style={{ alignItems: 'center', padding: '14px 16px', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)' }}>
-          <div style={{ flex: 1 }}>
-            <div className="action-text">Verrouillage par code PIN</div>
-            <div className="action-desc">Demander un code à 4 chiffres.</div>
-          </div>
-          <label className="toggle-switch">
-            <input type="checkbox" checked={usePin} onChange={() => setUsePin(!usePin)} />
-            <span className="toggle-slider"></span>
-          </label>
-        </div>
-
-        {/* Biometrics */}
-        <div className="action-row" style={{ alignItems: 'center', padding: '14px 16px', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)' }}>
-          <div style={{ flex: 1 }}>
-            <div className="action-text">Face ID / Touch ID</div>
-            <div className="action-desc">Déverrouillage instantané.</div>
-          </div>
-          <label className="toggle-switch">
-            <input type="checkbox" checked={useBiometrics} onChange={handleBiometricsToggle} />
-            <span className="toggle-slider"></span>
-          </label>
-        </div>
         
-        {/* 2FA */}
-        <div className="action-row" style={{ alignItems: 'center', padding: '14px 16px', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)' }}>
-          <div style={{ flex: 1 }}>
-            <div className="action-text">Double Authentification (2FA)</div>
-            <div className="action-desc">SMS ou Google Authenticator.</div>
+        {!setupStep && (
+          <>
+            <p className="body-sm" style={{ marginBottom: 10, color: 'var(--c-text-muted)' }}>
+              Ajoutez une couche de protection extra pour verrouiller l'accès.
+            </p>
+
+            {/* PIN Code */}
+            <div className="action-row" style={{ alignItems: 'center', padding: '14px 16px', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)' }}>
+              <div style={{ flex: 1 }}>
+                <div className="action-text">Verrouillage par code PIN</div>
+                <div className="action-desc">Demander un code à 4 chiffres.</div>
+              </div>
+              <label className="toggle-switch">
+                <input type="checkbox" checked={usePin} onChange={handlePinToggle} />
+                <span className="toggle-slider"></span>
+              </label>
+            </div>
+
+            {/* Biometrics */}
+            <div className="action-row" style={{ alignItems: 'center', padding: '14px 16px', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)' }}>
+              <div style={{ flex: 1 }}>
+                <div className="action-text">Face ID / Touch ID</div>
+                <div className="action-desc">Déverrouillage instantané.</div>
+              </div>
+              <label className="toggle-switch">
+                <input type="checkbox" checked={useBiometrics} onChange={handleBiometricsToggle} />
+                <span className="toggle-slider"></span>
+              </label>
+            </div>
+            
+            {/* 2FA */}
+            <div className="action-row" style={{ alignItems: 'center', padding: '14px 16px', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)' }}>
+              <div style={{ flex: 1 }}>
+                <div className="action-text">Double Authentification (2FA)</div>
+                <div className="action-desc">Application Authenticator.</div>
+              </div>
+              <label className="toggle-switch">
+                <input type="checkbox" checked={use2fa} onChange={handle2faToggle} />
+                <span className="toggle-slider"></span>
+              </label>
+            </div>
+          </>
+        )}
+
+        {setupStep === 'PIN' && (
+          <div style={{ textAlign: 'center', padding: '10px 0' }}>
+            <p className="title-sm">Créer un code PIN</p>
+            <p className="body-sm" style={{ marginBottom: 20 }}>Ce code sera demandé à l'ouverture de l'application.</p>
+            <input 
+              type="password" 
+              maxLength={4} 
+              autoFocus
+              value={pinInput} 
+              onChange={e => setPinInput(e.target.value.replace(/[^0-9]/g, ''))}
+              style={{ fontSize: 32, letterSpacing: 12, textAlign: 'center', width: 140, padding: 10, borderRadius: 'var(--r-md)', border: '2px solid var(--c-primary)', background: 'var(--c-surface-2)' }} 
+            />
+            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+              <button className="btn-secondary w-full" onClick={() => setSetupStep(null)}>Annuler</button>
+              <button className="btn-primary w-full" onClick={savePin}>Enregistrer</button>
+            </div>
           </div>
-          <label className="toggle-switch">
-            <input type="checkbox" checked={use2fa} onChange={() => setUse2fa(!use2fa)} />
-            <span className="toggle-slider"></span>
-          </label>
-        </div>
+        )}
+
+        {setupStep === '2FA' && (
+          <div style={{ textAlign: 'center', padding: '10px 0' }}>
+            <p className="title-sm">Configurer l'Authenticator</p>
+            <p className="body-sm" style={{ marginBottom: 16 }}>Scannez ce QR Code avec Google Authenticator ou Authy.</p>
+            
+            <div style={{ width: 150, height: 150, margin: '0 auto', background: 'white', padding: 10, borderRadius: 10 }}>
+               {/* Mock QR Code using CSS grid */}
+               <div style={{ width: '100%', height: '100%', display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 2 }}>
+                 {Array.from({length: 25}).map((_, i) => <div key={i} style={{ background: Math.random() > 0.4 ? 'black' : 'transparent' }} />)}
+               </div>
+            </div>
+
+            <p className="label-xs" style={{ marginTop: 16, marginBottom: 8 }}>Entrez le code à 6 chiffres</p>
+            <input 
+              type="text" 
+              maxLength={6} 
+              autoFocus
+              value={tfaInput} 
+              onChange={e => setTfaInput(e.target.value.replace(/[^0-9]/g, ''))}
+              style={{ fontSize: 24, letterSpacing: 8, textAlign: 'center', width: 180, padding: 10, borderRadius: 'var(--r-md)', border: '2px solid var(--c-primary)', background: 'var(--c-surface-2)' }} 
+            />
+            
+            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+              <button className="btn-secondary w-full" onClick={() => setSetupStep(null)}>Annuler</button>
+              <button className="btn-primary w-full" onClick={save2fa}>Vérifier</button>
+            </div>
+          </div>
+        )}
 
       </div>
     </BottomSheet>
