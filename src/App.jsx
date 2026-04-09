@@ -288,10 +288,10 @@ function IAScanModal({ isOpen, onClose }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Zap size={20} color="var(--c-primary)" className={step === 'processing' ? 'pulse' : ''} />
             <h2 className="title-md">
-              {step === 'upload' && 'Nouveau Document'}
-              {step === 'processing' && 'Analyse Intelligence...'}
-              {step === 'review' && 'Vérification IA'}
-              {step === 'done' && 'Coffre Sécurisé !'}
+              {step === 'upload' && t('scan_new')}
+              {step === 'processing' && t('scan_process')}
+              {step === 'review' && t('scan_review')}
+              {step === 'done' && t('scan_done')}
             </h2>
           </div>
           {/* On ne permet pas de fermer pendant qu'on travaille dur */}
@@ -306,16 +306,16 @@ function IAScanModal({ isOpen, onClose }) {
                 <label className="action-row" style={{ cursor: 'pointer', border: '1.5px solid var(--c-primary-soft)', background: 'var(--c-primary-soft)' }}>
                   <div className="icon-wrap md primary"><Camera size={24} /></div>
                   <div style={{ flex: 1 }}>
-                    <div className="action-text">Réaliser un scan photo</div>
-                    <div className="action-desc">Idéal pour les cartes et documents papiers.</div>
+                    <div className="action-text">{t('scan_photo')}</div>
+                    <div className="action-desc">{t('scan_photo_desc')}</div>
                   </div>
                   <input type="file" hidden accept="image/*" capture="environment" onChange={handleFileChange} />
                 </label>
                 <label className="action-row" style={{ cursor: 'pointer' }}>
                   <div className="icon-wrap md neutral"><UploadCloud size={24} /></div>
                   <div style={{ flex: 1 }}>
-                    <div className="action-text">Sélectionner un fichier</div>
-                    <div className="action-desc">Supporte les formats PDF et Images.</div>
+                    <div className="action-text">{t('scan_file')}</div>
+                    <div className="action-desc">{t('scan_file_desc')}</div>
                   </div>
                   <input type="file" hidden accept="image/*,application/pdf" onChange={handleFileChange} />
                 </label>
@@ -330,11 +330,11 @@ function IAScanModal({ isOpen, onClose }) {
                 <div className="scan-line-active" />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <p className="title-sm">L'IA de Privo décrypte votre document</p>
+                <p className="title-sm">{t('scan_ai_desc')}</p>
                 <div className="progress-bar-container" style={{ width: '60%', margin: '0 auto', height: 4, background: 'var(--c-surface-2)', borderRadius: 2 }}>
                   <div className="progress-bar-fill" /> {/* Animation CSS progress */}
                 </div>
-                <p className="body-sm" style={{ opacity: 0.6 }}>Analyse OCR et classification en cours...</p>
+                <p className="body-sm" style={{ opacity: 0.6 }}>{t('scan_ai_sub')}</p>
               </div>
             </div>
           )}
@@ -346,47 +346,47 @@ function IAScanModal({ isOpen, onClose }) {
                   {previewUrl && <img src={previewUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
                 </div>
                 <div>
-                  <div className="label-xs" style={{ color: 'var(--c-primary)' }}>Document détecté</div>
-                  <div className="title-sm">{formData.title || 'Inconnu'}</div>
+                  <div className="label-xs" style={{ color: 'var(--c-primary)' }}>{t('scan_detected')}</div>
+                  <div className="title-sm">{formData.title || t('scan_unknown')}</div>
                   <button onClick={() => setStep('upload')} style={{ color: 'var(--c-primary)', background: 'none', border: 'none', fontSize: '0.75rem', fontWeight: 600, padding: 0, marginTop: 4, cursor: 'pointer' }}>
-                    Changer de document
+                    {t('scan_change')}
                   </button>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <div className="label-xs">Nom du document (suggéré ✨)</div>
+                  <div className="label-xs">{t('scan_name')}</div>
                   <input className="input-field" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} />
                 </div>
 
                 <div style={{ display: 'flex', gap: 12 }}>
                   <div style={{ flex: 1 }}>
-                    <div className="label-xs">Catégorie</div>
+                    <div className="label-xs">{t('scan_cat')}</div>
                     <select className="input-field" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
-                      {['Identité', 'Finance', 'Santé', 'Contrat', 'Autre'].map(c => <option key={c} value={c}>{c}</option>)}
+                      {[t('cat_identity'), t('cat_finance'), t('cat_health'), t('cat_contracts'), t('cat_other')].map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div className="label-xs">Échéance / Expiration</div>
+                    <div className="label-xs">{t('scan_exp')}</div>
                     <input type="date" className="input-field" value={formData.expiresAt} onChange={e => setFormData({ ...formData, expiresAt: e.target.value })} />
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: 12 }}>
                   <div style={{ flex: 1 }}>
-                    <div className="label-xs">Émetteur (Optionnel)</div>
+                    <div className="label-xs">{t('scan_issuer')}</div>
                     <input className="input-field" placeholder="ex: État Civil, Hôpital..." value={formData.issuer || ''} onChange={e => setFormData({ ...formData, issuer: e.target.value })} />
                   </div>
                 </div>
 
                 <div>
-                  <div className="label-xs">Description (Optionnelle)</div>
+                  <div className="label-xs">{t('scan_desc')}</div>
                   <textarea className="input-field" style={{ minHeight: '60px', padding: '8px 12px' }} placeholder="Note ou résumé..." value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} />
                 </div>
 
                 <div>
-                  <div className="label-xs">Mots-clés (Tags)</div>
+                  <div className="label-xs">{t('scan_tags')}</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
                     {formData.tags.map(tag => (
                       <span key={tag} className="badge primary" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -394,7 +394,7 @@ function IAScanModal({ isOpen, onClose }) {
                       </span>
                     ))}
                   </div>
-                  <input className="input-field" placeholder="Ajouter un tag..." value={tempTag} onKeyPress={e => {
+                  <input className="input-field" placeholder={t('scan_add_tag')} value={tempTag} onKeyPress={e => {
                     if (e.key === 'Enter' && tempTag) {
                       setFormData({ ...formData, tags: [...formData.tags, tempTag] }); setTempTag('')
                     }
@@ -403,13 +403,13 @@ function IAScanModal({ isOpen, onClose }) {
 
                 {formData.category?.toLowerCase() === 'identité' && (
                   <label className="btn-secondary w-full" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', marginTop: 10 }}>
-                    <Camera size={18} /> Scanner le verso du document
+                    <Camera size={18} /> {t('scan_verso')}
                     <input type="file" hidden accept="image/*" capture="environment" onChange={handleAddVerso} />
                   </label>
                 )}
 
                 <button className="btn-primary w-full mt-2" onClick={handleFinalSave} disabled={isSaving}>
-                  {isSaving ? 'Sécurisation progressive...' : <><ShieldCheck size={20} /> Valider l'archivage</>}
+                  {isSaving ? t('scan_saving') : <><ShieldCheck size={20} /> {t('scan_save')}</>}
                 </button>
               </div>
             </div>
@@ -420,8 +420,8 @@ function IAScanModal({ isOpen, onClose }) {
               <div className="avatar" style={{ background: 'var(--c-success-soft)', color: 'var(--c-success)', width: 80, height: 80, margin: '0 auto 24px' }}>
                 <Check size={44} className="pulse-fast" />
               </div>
-              <p className="title-md">Document Arché !</p>
-              <p className="body-sm" style={{ marginTop: 10 }}>Vos données sont désormais protégées.</p>
+              <p className="title-md">{t('scan_archived')}</p>
+              <p className="body-sm" style={{ marginTop: 10 }}>{t('scan_protected')}</p>
             </div>
           )}
         </div>
@@ -474,29 +474,29 @@ function QuickShareModal({ isOpen, onClose }) {
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Share2 size={20} color="var(--c-primary)" />
-            <h2 className="title-md">Partage rapide</h2>
+            <h2 className="title-md">{t('share_title')}</h2>
           </div>
           <button className="modal-close-btn" onClick={onClose}><X size={18} /></button>
         </div>
         <div className="modal-body">
           <div className="insight-card" style={{ background: 'var(--c-primary-soft)', border: 'none', gap: 12 }}>
             <ShieldCheck size={22} color="var(--c-primary)" style={{ flexShrink: 0 }} />
-            <p className="body-sm" style={{ color: 'var(--c-primary)' }}>Lien chiffré de bout en bout. Expiration automatique garantie.</p>
+            <p className="body-sm" style={{ color: 'var(--c-primary)' }}>{t('share_desc')}</p>
           </div>
-          <div className="label-xs" style={{ paddingLeft: 4, marginTop: 8 }}>Paramètres de sécurité</div>
+          <div className="label-xs" style={{ paddingLeft: 4, marginTop: 8 }}>{t('share_settings')}</div>
           <button className="action-row">
             <div className="icon-wrap md neutral"><Clock size={22} /></div>
             <div style={{ flex: 1 }}>
-              <div className="action-text">Expiration</div>
-              <div className="action-desc">Le lien expire dans 24 heures.</div>
+              <div className="action-text">{t('share_exp')}</div>
+              <div className="action-desc">{t('share_exp_desc')}</div>
             </div>
             <ChevronRight size={18} color="var(--c-text-muted)" />
           </button>
           <button className="action-row">
             <div className="icon-wrap md neutral"><Lock size={22} /></div>
             <div style={{ flex: 1 }}>
-              <div className="action-text">Mot de passe</div>
-              <div className="action-desc">Protection supplémentaire (facultatif).</div>
+              <div className="action-text">{t('share_pwd')}</div>
+              <div className="action-desc">{t('share_pwd_desc')}</div>
             </div>
             <ChevronRight size={18} color="var(--c-text-muted)" />
           </button>
@@ -504,10 +504,10 @@ function QuickShareModal({ isOpen, onClose }) {
             <Link size={18} color="var(--c-primary-mid)" style={{ flexShrink: 0 }} />
             <span className="body-sm truncate" style={{ flex: 1 }}>https://digisafe.app/s/a7f82b9...</span>
             <button style={{ background: 'var(--c-primary-soft)', color: 'var(--c-primary)', fontFamily: 'Manrope', fontWeight: 700, fontSize: '0.8rem', padding: '7px 14px', borderRadius: 'var(--r-sm)', whiteSpace: 'nowrap' }}>
-              Copier
+              {t('copy')}
             </button>
           </div>
-          <button className="btn-secondary mt-4" onClick={onClose}>Fermer</button>
+          <button className="btn-secondary mt-4" onClick={onClose}>{t('close')}</button>
         </div>
     </BottomSheet>
   )
@@ -532,8 +532,8 @@ function Dashboard({ onAddClick }) {
     <div className="page-enter">
       <div className="top-bar">
         <div>
-          <div className="hero-greeting">Bienvenue 👋</div>
-          <h1 className="hero-title">Bonjour, <span className="accent">{authUser?.name || 'Utilisateur'}</span></h1>
+          <div className="hero-greeting">{t('welcome')}</div>
+          <h1 className="hero-title">{t('hello')} <span className="accent">{authUser?.name || 'Utilisateur'}</span></h1>
         </div>
         <div style={{ width: 44, height: 44, borderRadius: 12, background: 'white', border: '1.5px solid var(--c-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 4, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
           <img src="/digisafe_official_logo_1775050111054.png" alt="Privo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
@@ -549,7 +549,7 @@ function Dashboard({ onAddClick }) {
           onClick={() => navigate('/documents')}
         >
           <Search size={18} color="var(--c-primary-mid)" />
-          <span style={{ color: 'var(--c-text-muted)', fontSize: '0.9rem' }}>Rechercher un document...</span>
+          <span style={{ color: 'var(--c-text-muted)', fontSize: '0.9rem' }}>{t('search_doc')}</span>
         </button>
 
         {/* EMPTY STATE — new user */}
@@ -1319,7 +1319,7 @@ function AppContent() {
 function AIChatModal({ isOpen, onClose }) {
   const { documents, authUser } = useApp()
   const [messages, setMessages] = useState([
-    { role: 'assistant', text: 'Salut ! Pose-moi n\'importe quelle question sur tes documents.' }
+    { role: 'assistant', text: t('chat_hello') }
   ])
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
@@ -1387,7 +1387,7 @@ function AIChatModal({ isOpen, onClose }) {
 
       setMessages(prev => [...prev, { role: 'assistant', text: data.reply }])
     } catch (err) {
-      setMessages(prev => [...prev, { role: 'assistant', text: '⚠️ Une erreur s\'est produite. Réessaie.' }])
+      setMessages(prev => [...prev, { role: 'assistant', text: t('chat_err') }])
     } finally {
       setIsTyping(false)
     }
@@ -1467,7 +1467,7 @@ function AIChatModal({ isOpen, onClose }) {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSend()}
-            placeholder="Pose une question..."
+            placeholder={t('chat_ask')}
             disabled={isTyping}
             style={{
               flex: 1, background: 'var(--c-surface-2)', border: '1px solid var(--c-border)',
