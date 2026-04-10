@@ -196,13 +196,13 @@ function IAScanModal({ isOpen, onClose }) {
   const [file, setFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
   const [filePath, setFilePath] = useState(null) // Stocke le chemin unique
-  const [formData, setFormData] = useState({ title: '', category: 'Autre', expiresAt: '', issuer: '', tags: [] })
+  const [formData, setFormData] = useState({ title: '', category: 'Autre', expiresAt: '', issuer: '', description: '', tags: [] })
   const [isSaving, setIsSaving] = useState(false)
   const [tempTag, setTempTag] = useState('')
 
   const reset = () => {
     setStep('upload'); setFile(null); setPreviewUrl(null); setFilePath(null); setIsSaving(false)
-    setFormData({ title: '', category: 'Autre', expiresAt: '', issuer: '', tags: [] })
+    setFormData({ title: '', category: 'Autre', expiresAt: '', issuer: '', description: '', tags: [] })
   }
 
   const handleClose = () => { if (step !== 'processing' && step !== 'review') { reset(); onClose(); } }
