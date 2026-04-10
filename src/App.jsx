@@ -1350,9 +1350,6 @@ function ProfilePage({ onSecurityClick, onSettingsClick }) {
   )
 }
 
-/* ================================================================
-   APP SHELL
-   ================================================================ */
 function AppContent() {
   const navigate = useNavigate()
   const { deleteDocument } = useApp()
@@ -1378,7 +1375,10 @@ function AppContent() {
           <Route path="/" element={
             <Dashboard 
               onAddClick={() => setModal('SCAN')} 
-              onEmergencyClick={() => setModal('EMERGENCY')} 
+              onEmergencyClick={() => {
+                console.log("DEBUG: Triggering EMERGENCY modal");
+                setModal('EMERGENCY');
+              }} 
             />
           } />
           <Route path="/documents" element={<Library onDocClick={handleDocClick} />} />
