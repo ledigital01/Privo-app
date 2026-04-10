@@ -137,3 +137,4 @@ const EmergencyPage = ({ isOpen, onClose }) => {
 }
 
 export default EmergencyPage
+// End of Emergency Mode component implementation
