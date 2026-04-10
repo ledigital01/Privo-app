@@ -214,6 +214,13 @@ function IAScanModal({ isOpen, onClose }) {
   const handleFileChange = async (e) => {
     const selectedFile = e.target.files[0]
     if (!selectedFile) return
+
+    // BRIDAGE PLAN GRATUIT 🛡️
+    if (authUser.plan === 'free') {
+      alert("🤖 Le Scan Intelligent par IA est une fonctionnalité Premium. Passez au plan Pro pour un auto-remplissage magique !")
+      return
+    }
+
     setPreviewUrl(URL.createObjectURL(selectedFile))
     setFile(selectedFile)
     setStep('processing')
