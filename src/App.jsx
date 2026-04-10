@@ -19,6 +19,7 @@ import { t } from './utils/i18n'
 import { supabase } from './utils/supabaseClient'
 import QuickShareModal from './components/Modals/QuickShareModal'
 import SharePage from './pages/SharePage'
+import EmergencyPage from './pages/EmergencyPage'
 
 /* ================================================================
    ICON MAP — converts stored string → JSX icon
@@ -761,6 +762,7 @@ function Library({ onDocClick }) {
    PAGE — DOCUMENT DETAIL (with real delete)
    ================================================================ */
 function DocumentDetail({ doc, onBack, onShare, onDeleteRequest, onEditRequest }) {
+  const { toggleEmergency } = useApp()
   const [isRevealed, setIsRevealed] = useState(false)
   const [realImageUrl, setRealImageUrl] = useState(null)
   const [showAIModal, setShowAIModal] = useState(false)
@@ -899,6 +901,19 @@ function DocumentDetail({ doc, onBack, onShare, onDeleteRequest, onEditRequest }
           </button>
           <button className="action-btn danger" onClick={onDeleteRequest}>
             <div className="icon-wrap md danger"><Trash2 size={22} /></div>{t('delete')}
+          </button>
+          
+          <button 
+            className={`action-btn ${doc.isEmergency ? 'pulse-slow' : ''}`} 
+            onClick={() => toggleEmergency(doc.id, !doc.isEmergency)}
+            style={{ border: doc.isEmergency ? '1.5px solid var(--c-danger)' : 'none' }}
+          >
+            <div className={`icon-wrap md ${doc.isEmergency ? 'danger' : 'neutral'}`}>
+              <ShieldAlert size={22} color={doc.isEmergency ? 'var(--c-danger)' : 'var(--c-text-muted)'} />
+            </div>
+            <span style={{ color: doc.isEmergency ? 'var(--c-danger)' : 'inherit', fontWeight: doc.isEmergency ? 700 : 'inherit' }}>
+              {doc.isEmergency ? 'SOS' : 'Urgence'}
+            </span>
           </button>
         </div>
 
@@ -1360,7 +1375,12 @@ function AppContent() {
       <div className="app-shell">
         <div className="page-bg-blur" />
         <Routes>
-          <Route path="/" element={<Dashboard onAddClick={() => setModal('SCAN')} />} />
+          <Route path="/" element={
+            <Dashboard 
+              onAddClick={() => setModal('SCAN')} 
+              onEmergencyClick={() => setModal('EMERGENCY')} 
+            />
+          } />
           <Route path="/documents" element={<Library onDocClick={handleDocClick} />} />
           <Route path="/detail" element={<DocumentDetail doc={selectedDoc} onBack={() => navigate(-1)} onShare={() => setModal('SHARE')} onDeleteRequest={handleDeleteRequest} onEditRequest={() => setModal('EDIT')} />} />
           <Route path="/notifications" element={<NotificationsPage onDocClick={handleDocClick} />} />
@@ -1391,6 +1411,7 @@ function AppContent() {
       <SecuritySettingsModal isOpen={modal === 'SECURITY'} onClose={() => setModal(null)} />
       <SettingsModal isOpen={modal === 'SETTINGS'} onClose={() => setModal(null)} />
       <AIChatModal isOpen={modal === 'CHAT'} onClose={() => setModal(null)} />
+      <EmergencyPage isOpen={modal === 'EMERGENCY'} onClose={() => setModal(null)} />
     </>
   )
 }

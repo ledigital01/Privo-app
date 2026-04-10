@@ -30,7 +30,7 @@ const INSIGHTS = [
   { id: 2, title: 'IA: Suggestion', desc: 'J\'ai trouvé 4 nouvelles factures dans vos emails. Les ajouter ?', type: 'info' },
 ]
 
-const Dashboard = ({ onAddClick }) => {
+const Dashboard = ({ onAddClick, onEmergencyClick }) => {
   return (
     <div className="space-y-10">
       {/* Search Header */}
@@ -101,7 +101,7 @@ const Dashboard = ({ onAddClick }) => {
             Préparez vos documents critiques pour un accès immédiat.
           </p>
           <button 
-            onClick={() => alert("Le Mode Urgence (accès hors-ligne & SOS) sera disponible dans la prochaine mise à jour !")}
+            onClick={onEmergencyClick}
             className="bg-white text-[#003d9b] px-5 py-2.5 rounded-xl font-headline font-bold flex items-center gap-2 shadow-xl hover:bg-[#eceef0] transition-colors active:scale-95"
           >
             <Shield size={18} /> Activer l'accès

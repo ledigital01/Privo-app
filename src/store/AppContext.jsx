@@ -67,6 +67,7 @@ export const AppProvider = ({ children }) => {
         iconName: d.icon_name || 'file',
         filePath: d.file_path,
         description: d.description || '',
+        isEmergency: d.is_emergency || false,
         createdAt: d.created_at
       }))
       setDocuments(docs)
@@ -122,6 +123,7 @@ export const AppProvider = ({ children }) => {
         iconName: data[0].icon_name || 'file',
         filePath: data[0].file_path,
         description: data[0].description || '',
+        isEmergency: data[0].is_emergency || false,
         createdAt: data[0].created_at
       }
 
@@ -182,6 +184,35 @@ export const AppProvider = ({ children }) => {
     }
   }
 
+  // 5. Mettre à jour un document
+  const updateDocument = async (id, updates) => {
+    // Conversion React -> SQL
+    const sqlUpdates = {}
+    if (updates.title !== undefined) sqlUpdates.title = updates.title
+    if (updates.type !== undefined) sqlUpdates.type = updates.type
+    if (updates.expiresAt !== undefined) sqlUpdates.expires_at = updates.expiresAt
+    if (updates.iconName !== undefined) sqlUpdates.icon_name = updates.iconName
+    if (updates.description !== undefined) sqlUpdates.description = updates.description
+    if (updates.isEmergency !== undefined) sqlUpdates.is_emergency = updates.isEmergency
+
+    const { data, error } = await supabase
+      .from('documents')
+      .update(sqlUpdates)
+      .eq('id', id)
+      .select()
+
+    if (!error && data) {
+      setDocuments(prev => prev.map(d => d.id === id ? { ...d, ...updates } : d))
+      return { success: true }
+    }
+    return { error: error?.message }
+  }
+
+  // 6. Basculer le mode urgence
+  const toggleEmergency = async (id, status) => {
+    return updateDocument(id, { isEmergency: status })
+  }
+
   // Stats calculées
   const stats = useMemo(() => {
     const now = new Date()
@@ -204,7 +235,7 @@ export const AppProvider = ({ children }) => {
 
   const value = {
     authUser, documents, loading, stats, expiringDocs, searchQuery, filteredDocuments,
-    setSearchQuery, addDocument, deleteDocument, logout, login, register, 
+    setSearchQuery, addDocument, deleteDocument, updateDocument, toggleEmergency, logout, login, register, 
     isAuthenticated: !!authUser
   }
 
