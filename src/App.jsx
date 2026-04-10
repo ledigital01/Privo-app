@@ -273,7 +273,11 @@ function IAScanModal({ isOpen, onClose }) {
     const result = await addDocument({ ...formData, filePath }, null)
     
     if (result.error) {
-      alert(`Erreur lors de l'archivage: ${result.error}`)
+      if (result.error === 'LIMITE_ATTEINTE') {
+        alert(result.message)
+      } else {
+        alert(`Erreur lors de l'archivage: ${result.error}`)
+      }
       setIsSaving(false)
       return
     }

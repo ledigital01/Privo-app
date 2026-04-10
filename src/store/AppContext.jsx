@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react'
 import { supabase } from '../utils/supabaseClient'
+import { PLAN_LIMITS } from '../utils/plans'
 
 const AppContext = createContext()
 
@@ -14,6 +15,8 @@ export const AppProvider = ({ children }) => {
     const initSession = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
+        // Dans une vraie app, on fetcherait le plan depuis 'profiles' 
+        // Ici on initialise à 'free' par défaut
         setAuthUser({
           id: session.user.id,
           email: session.user.email,
@@ -74,9 +77,18 @@ export const AppProvider = ({ children }) => {
     }
   }
 
-  // 3. AJOUTER UN DOCUMENT (CORRIGÉ ✅)
+  // 3. AJOUTER UN DOCUMENT (AVEC CONTROLE DE PLAN 🛡️)
   const addDocument = async (docData, file) => {
     if (!authUser) return { error: "Non authentifié" }
+
+    // VERIFICATION LIMITE PLAN
+    const limits = PLAN_LIMITS[authUser.plan]
+    if (documents.length >= limits.maxDocs) {
+      return { 
+        error: `LIMITE_ATTEINTE`, 
+        message: `Vous avez atteint la limite de ${limits.maxDocs} documents de votre plan ${limits.label}. Passez au plan Pro pour en ajouter plus !` 
+      }
+    }
 
     try {
       let filePath = docData.filePath || null
