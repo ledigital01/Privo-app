@@ -20,6 +20,7 @@ import { supabase } from './utils/supabaseClient'
 import QuickShareModal from './components/Modals/QuickShareModal'
 import SharePage from './pages/SharePage'
 import EmergencyPage from './pages/EmergencyPage'
+import HelpPage from './pages/HelpPage'
 
 /* ================================================================
    ICON MAP — converts stored string → JSX icon
@@ -1299,7 +1300,7 @@ function ProfilePage({ onSecurityClick, onSettingsClick }) {
     { icon: <CreditCard size={20} />, label: t('subscription'), desc: `${t('current_plan')} : ${user.plan === 'free' ? t('free') : user.plan === 'pro' ? 'Pro' : 'Business'}`, path: '/subscription', action: null, color: 'primary' },
     { icon: <Shield size={20} />, label: t('security'), desc: 'PIN & Authenticator', path: null, action: onSecurityClick, color: 'success' },
     { icon: <Settings size={20} />, label: t('settings'), desc: 'Lang/Notifications', path: null, action: onSettingsClick, color: 'neutral' },
-    { icon: <HelpCircle size={20} />, label: t('help'), desc: "FAQ/Contact", path: null, action: showComingSoon, color: 'neutral' },
+    { icon: <HelpCircle size={20} />, label: t('help'), desc: "FAQ/Contact", path: '/help', action: null, color: 'neutral' },
     { icon: <LogOut size={20} />, label: t('logout'), desc: null, path: null, action: handleLogout, color: 'danger' },
   ]
 
@@ -1399,6 +1400,7 @@ function AppContent() {
           <Route path="/notifications" element={<NotificationsPage onDocClick={handleDocClick} />} />
           <Route path="/profile" element={<ProfilePage onSecurityClick={() => setModal('SECURITY')} onSettingsClick={() => setModal('SETTINGS')} />} />
           <Route path="/subscription" element={<SubscriptionPage onBack={() => navigate(-1)} />} />
+          <Route path="/help" element={<HelpPage />} />
         </Routes>
         <BottomNav onAddClick={() => setModal('SCAN')} />
         <button
