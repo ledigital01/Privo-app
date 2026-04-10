@@ -214,13 +214,6 @@ function IAScanModal({ isOpen, onClose }) {
   const handleFileChange = async (e) => {
     const selectedFile = e.target.files[0]
     if (!selectedFile) return
-
-    // BRIDAGE PLAN GRATUIT 🛡️
-    if (authUser.plan === 'free') {
-      alert("🤖 Le Scan Intelligent par IA est une fonctionnalité Premium. Passez au plan Pro pour un auto-remplissage magique !")
-      return
-    }
-
     setPreviewUrl(URL.createObjectURL(selectedFile))
     setFile(selectedFile)
     setStep('processing')
@@ -280,11 +273,7 @@ function IAScanModal({ isOpen, onClose }) {
     const result = await addDocument({ ...formData, filePath }, null)
     
     if (result.error) {
-      if (result.error === 'LIMITE_ATTEINTE') {
-        alert(result.message)
-      } else {
-        alert(`Erreur lors de l'archivage: ${result.error}`)
-      }
+      alert(`Erreur lors de l'archivage: ${result.error}`)
       setIsSaving(false)
       return
     }
