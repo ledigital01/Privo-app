@@ -804,19 +804,38 @@ function Library({ onDocClick }) {
    ================================================================ */
 function DocumentDetail({ doc, onBack, onShare, onDeleteRequest, onEditRequest }) {
   const [isRevealed, setIsRevealed] = useState(false)
+  const [realImageUrl, setRealImageUrl] = useState(null)
   const lang = localStorage.getItem('digisafe_lang') || 'fr'
 
   if (!doc) return null
   const status = getDocStatus(doc.expiresAt)
 
+  // Récupérer la vraie image depuis Supabase Storage
+  useEffect(() => {
+    const fetchSignedUrl = async () => {
+      if (!doc.filePath) return
+      
+      try {
+        const { data, error } = await supabase.storage
+          .from('documents')
+          .createSignedUrl(doc.filePath, 3600) // URL valide 1 heure
+
+        if (error) throw error
+        setRealImageUrl(data.signedUrl)
+      } catch (err) {
+        console.error("Erreur récupération image:", err)
+      }
+    }
+
+    fetchSignedUrl()
+  }, [doc.filePath])
+
   const handleRevealStart = () => setIsRevealed(true)
   const handleRevealEnd = () => setIsRevealed(false)
 
-  // URL dynamique basée sur le vrai fichier uploadé dans le Storage Supabase
-  const supabaseUrl = 'https://tvotvvalqctfuyylkzrz.supabase.co'
-  const realImageUrl = doc.filePath ? `${supabaseUrl}/storage/v1/object/public/documents/${doc.filePath}` : null
-  const demoImageUrl = "https://images.unsplash.com/photo-1618044733300-9472054094ee?q=80&w=600&auto=format&fit=crop"
-  const backgroundUrl = realImageUrl || demoImageUrl
+  // Fallback si pas de fichier ou erreur
+  const fallbackUrl = "https://images.unsplash.com/photo-1618044733300-9472054094ee?q=80&w=600&auto=format&fit=crop"
+  const finalImageUrl = realImageUrl || fallbackUrl
 
   return (
     <div className="page-enter">
@@ -847,16 +866,16 @@ function DocumentDetail({ doc, onBack, onShare, onDeleteRequest, onEditRequest }
           onTouchStart={handleRevealStart}
           onTouchEnd={handleRevealEnd}
         >
-          {/* L'image de fond dynamique (floutée par défaut, devient nette et visible) */}
+          {/* L'image de fond (floutée par défaut, devient nette au clic) */}
           <div style={{
-            position: 'absolute', inset: -20, // inset négatif pour éviter les bords nets
-            background: `url('${backgroundUrl}') center/cover`,
-            filter: isRevealed ? 'blur(0px)' : 'blur(16px)',
-            opacity: isRevealed ? 1 : 0.3,
-            transition: 'all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
+            position: 'absolute', inset: -20,
+            background: `url(${finalImageUrl}) center/cover`,
+            filter: isRevealed ? 'blur(0px)' : 'blur(20px)',
+            opacity: isRevealed ? 1 : 0.4,
+            transition: 'all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)',
             zIndex: 1
           }}>
-            <div style={{ position: 'absolute', inset: 0, background: 'var(--c-surface)', opacity: isRevealed ? 0 : 0.6, transition: 'opacity 0.3s' }} />
+            <div style={{ position: 'absolute', inset: 0, background: 'var(--c-surface)', opacity: isRevealed ? 0 : 0.7, transition: 'opacity 0.4s' }} />
           </div>
 
           <div style={{

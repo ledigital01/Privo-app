@@ -77,9 +77,9 @@ export const AppProvider = ({ children }) => {
     if (!authUser) return { error: "Non authentifié" }
 
     try {
-      let filePath = null
+      let filePath = docData.filePath || null
 
-      // Upload du fichier si présent
+      // Upload du fichier si présent (écrase le filePath si un nouveau fichier est fourni)
       if (file) {
         const fileExt = file.name.split('.').pop()
         const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`
