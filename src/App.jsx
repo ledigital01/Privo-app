@@ -6,7 +6,7 @@ import {
   Search, Filter, Share2, Download, Trash2, Edit2, ChevronLeft,
   Camera, UploadCloud, FileText, ShieldCheck, Calendar,
   Lock, Link, X, Check, CreditCard, Settings, HelpCircle, LogOut, GraduationCap,
-  Sparkles, MessageSquare, Send
+  Sparkles, MessageSquare, Send, ShieldAlert
 } from 'lucide-react'
 
 import { AppProvider, useApp, getDocStatus, formatExpiry } from './store/AppContext'
