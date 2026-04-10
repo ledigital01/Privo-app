@@ -476,7 +476,7 @@ function DeleteModal({ isOpen, doc, onClose, onConfirm }) {
 /* ================================================================
    PAGE — DASHBOARD (dynamic)
    ================================================================ */
-function Dashboard({ onAddClick }) {
+function Dashboard({ onAddClick, onEmergencyClick }) {
   const { authUser, stats, expiringDocs, documents } = useApp()
   const navigate = useNavigate()
   const recentDocs = documents.slice(0, 3)
@@ -661,11 +661,22 @@ function Dashboard({ onAddClick }) {
               </button>
             </div>
 
-            {/* Emergency card */}
-            <div className="emergency-card">
-              <h3>{t('emergency_mode')}</h3>
-              <p>{t('emergency_desc')}</p>
-              <button className="btn-white"><Shield size={16} /> {t('activate_access')}</button>
+            {/* Emergency Mode Card */}
+            <div 
+              className="emergency-card" 
+              onClick={onEmergencyClick}
+              style={{ cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
+            >
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <ShieldAlert size={20} color="white" /> {t('emergency_mode')}
+                </h3>
+                <p style={{ margin: '8px 0 20px', opacity: 0.9 }}>{t('emergency_desc')}</p>
+                <div className="btn-white" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <ShieldCheck size={16} /> {t('activate_access')}
+                </div>
+              </div>
+              <Shield size={120} style={{ position: 'absolute', bottom: -20, right: -20, opacity: 0.1, transform: 'rotate(15deg)' }} />
             </div>
           </>
         )}
