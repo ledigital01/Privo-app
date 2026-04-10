@@ -96,18 +96,81 @@ const EmergencyPage = ({ isOpen, onClose }) => {
                  </div>
                  
                  {emergencyDocs.length === 0 ? (
-                   <div style={{ textAlign: 'center', padding: '40px 20px', background: 'var(--c-bg)', borderRadius: 'var(--r-xl)', border: '2px dashed var(--c-border)' }}>
-                      <AlertTriangle size={32} color="var(--c-text-muted)" style={{ marginBottom: 12, opacity: 0.5 }} />
-                      <p style={{ color: 'var(--c-text-muted)', fontSize: '0.9rem' }}>Aucun document marqué "Urgence". Ajoutez-les depuis votre bibliothèque.</p>
-                   </div>
-                 ) : (
-                   emergencyDocs.map(doc => (
-                     <motion.div 
-                       key={doc.id} 
-                       whileTap={{ scale: 0.97 }}
-                       onClick={() => setSelectedDoc(doc)}
-                       style={{ background: 'white', border: '1.5px solid var(--c-border)', borderRadius: 'var(--r-xl)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16, boxShadow: 'var(--shadow-sm)' }}
-                     >
+                 <motion.div 
+                   initial={{ opacity: 0, y: 20 }}
+                   animate={{ opacity: 1, y: 0 }}
+                   style={{ 
+                     background: '#F8FAFC', 
+                     borderRadius: 'var(--r-2xl)', 
+                     padding: '32px 24px', 
+                     border: '1.5px solid #E2E8F0',
+                     marginTop: 20
+                   }}
+                 >
+                    <div style={{ textAlign: 'center', marginBottom: 32 }}>
+                       <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#FFF1F2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: 'var(--c-danger)' }}>
+                          <AlertTriangle size={32} />
+                       </div>
+                       <h2 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--c-text)' }}>Votre coffre SOS est vide</h2>
+                       <p style={{ color: 'var(--c-text-muted)', fontSize: '0.85rem', marginTop: 8 }}>Suivez ces étapes pour ajouter vos premiers documents critiques :</p>
+                    </div>
+
+                    <div className="space-y-6">
+                       {/* Étape 1 */}
+                       <div style={{ display: 'flex', gap: 16 }}>
+                          <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--c-primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontWeight: 900, fontSize: '0.9rem' }}>1</div>
+                          <div>
+                             <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--c-text)' }}>Ouvrez votre Bibliothèque</div>
+                             <p style={{ fontSize: '0.8rem', color: 'var(--c-text-muted)', marginTop: 4 }}>Allez dans l'onglet "Documents" pour voir tous vos fichiers.</p>
+                          </div>
+                       </div>
+
+                       {/* Étape 2 */}
+                       <div style={{ display: 'flex', gap: 16 }}>
+                          <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--c-primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontWeight: 900, fontSize: '0.9rem' }}>2</div>
+                          <div>
+                             <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--c-text)' }}>Sélectionnez un document</div>
+                             <p style={{ fontSize: '0.8rem', color: 'var(--c-text-muted)', marginTop: 4 }}>Choisissez un document vital (ID, Attestation, Carnet de santé...).</p>
+                          </div>
+                       </div>
+
+                       {/* Étape 3 */}
+                       <div style={{ display: 'flex', gap: 16 }}>
+                          <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--c-danger)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontWeight: 900, fontSize: '0.9rem' }}>3</div>
+                          <div>
+                             <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--c-danger)' }}>Activez le mode SOS</div>
+                             <p style={{ fontSize: '0.8rem', color: 'var(--c-text-muted)', marginTop: 4 }}>
+                                Dans les détails du document, <strong>faites défiler la page vers le bas</strong> pour trouver le bouton <span style={{ color: 'var(--c-danger)', fontWeight: 700 }}>"Urgence / SOS"</span> et activez-le.
+                             </p>
+                          </div>
+                       </div>
+                    </div>
+
+                    <button 
+                      onClick={onClose}
+                      style={{ 
+                        width: '100%', 
+                        marginTop: 40, 
+                        height: 54, 
+                        background: 'var(--c-primary)', 
+                        color: 'white', 
+                        borderRadius: 16, 
+                        fontWeight: 800, 
+                        fontSize: '0.95rem',
+                        boxShadow: '0 8px 16px rgba(0,61,155,0.2)'
+                      }}
+                    >
+                       Compris, j'y vais !
+                    </button>
+                 </motion.div>
+               ) : (
+                 emergencyDocs.map(doc => (
+                   <motion.div 
+                     key={doc.id} 
+                     whileTap={{ scale: 0.97 }}
+                     onClick={() => setSelectedDoc(doc)}
+                     style={{ background: 'white', border: '1.5px solid var(--c-border)', borderRadius: 'var(--r-xl)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16, boxShadow: 'var(--shadow-sm)' }}
+                   >
                         <div style={{ width: 48, height: 48, borderRadius: 16, background: '#FFF1F2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--c-danger)' }}>
                            <FileText size={24} />
                         </div>
