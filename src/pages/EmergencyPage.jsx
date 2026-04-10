@@ -88,66 +88,6 @@ const EmergencyPage = ({ isOpen, onClose }) => {
             </div>
 
             <div style={{ padding: '24px' }}>
-              {/* Infos Médicales (Dynamique) */}
-              <div style={{ background: '#FFF1F2', borderRadius: 'var(--r-xl)', padding: 20, marginBottom: 24, border: '1px solid #FECACA' }}>
-                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--c-danger)' }}>
-                       <Activity size={18} />
-                       <h2 style={{ fontSize: '0.9rem', fontWeight: 800 }}>DONNÉES VITALES</h2>
-                    </div>
-                    <button onClick={() => isEditingInfo ? handleSaveInfo() : setIsEditingInfo(true)} style={{ color: 'var(--c-danger)', display: 'flex', alignItems: 'center', gap: 4, background: 'white', padding: '4px 10px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 700, border: '1px solid #FECACA' }}>
-                       {isEditingInfo ? <><Save size={14} /> Sauver</> : <><Edit3 size={14} /> Modifier</>}
-                    </button>
-                 </div>
-                 
-                 {isEditingInfo ? (
-                   <textarea 
-                     value={medicalInfo}
-                     onChange={e => setMedicalInfo(e.target.value)}
-                     style={{ width: '100%', background: 'white', border: '1px solid #FECACA', borderRadius: 8, padding: 12, fontSize: '0.9rem', minHeight: 60 }}
-                   />
-                 ) : (
-                   <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#991B1B' }}>
-                      {medicalInfo}
-                   </div>
-                 )}
-              </div>
-
-              {/* Contacts d'Urgence (Dynamique) */}
-              <div style={{ background: 'var(--c-bg)', border: '1px solid var(--c-border)', borderRadius: 'var(--r-xl)', padding: 20, marginBottom: 32 }}>
-                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20, color: '#4B5563' }}>
-                    <Heart size={18} />
-                    <h2 style={{ fontSize: '0.9rem', fontWeight: 800 }}>CONTACT PRIORITAIRE</h2>
-                 </div>
-                 
-                 {isEditingInfo ? (
-                   <div className="space-y-2">
-                     <input 
-                       value={emergencyContact.name} 
-                       onChange={e => setEmergencyContact(prev => ({ ...prev, name: e.target.value }))}
-                       placeholder="Nom du proche"
-                       style={{ width: '100%', padding: '10px', border: '1px solid var(--c-border)', borderRadius: 8 }}
-                     />
-                     <input 
-                       value={emergencyContact.phone} 
-                       onChange={e => setEmergencyContact(prev => ({ ...prev, phone: e.target.value }))}
-                       placeholder="Téléphone"
-                       style={{ width: '100%', padding: '10px', border: '1px solid var(--c-border)', borderRadius: 8 }}
-                     />
-                   </div>
-                 ) : (
-                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                         <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--c-text)' }}>{emergencyContact.name}</div>
-                         <div style={{ fontSize: '0.9rem', color: 'var(--c-text-muted)', marginTop: 2 }}>{emergencyContact.phone}</div>
-                      </div>
-                      <a href={`tel:${emergencyContact.phone}`} style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--c-success)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', boxShadow: '0 4px 12px rgba(34, 197, 94, 0.4)' }}>
-                         <Phone size={22} />
-                      </a>
-                   </div>
-                 )}
-              </div>
-
               {/* Documents d'Urgence (Dynamique) */}
               <div className="space-y-4">
                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
