@@ -1839,6 +1839,7 @@ function AuthGuard({ children }) {
   return children
 }
 
+// App final export with secure routing for sharing and internal vault
 export default function App() {
   useEffect(() => {
     if (localStorage.getItem('digisafe_theme') === 'dark') {
