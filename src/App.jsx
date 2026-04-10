@@ -17,6 +17,7 @@ import './index.css'
 import BottomSheet from './components/BottomSheet'
 import { t } from './utils/i18n'
 import { supabase } from './utils/supabaseClient'
+import QuickShareModal from './components/Modals/QuickShareModal'
 
 /* ================================================================
    ICON MAP — converts stored string → JSX icon
@@ -468,51 +469,7 @@ function DeleteModal({ isOpen, doc, onClose, onConfirm }) {
 /* ================================================================
    MODAL — QUICK SHARE
    ================================================================ */
-function QuickShareModal({ isOpen, onClose }) {
-  if (!isOpen) return null
-  return (
-    <BottomSheet isOpen={isOpen} onClose={onClose} height="auto">
-        <div className="modal-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Share2 size={20} color="var(--c-primary)" />
-            <h2 className="title-md">{t('share_title')}</h2>
-          </div>
-          <button className="modal-close-btn" onClick={onClose}><X size={18} /></button>
-        </div>
-        <div className="modal-body">
-          <div className="insight-card" style={{ background: 'var(--c-primary-soft)', border: 'none', gap: 12 }}>
-            <ShieldCheck size={22} color="var(--c-primary)" style={{ flexShrink: 0 }} />
-            <p className="body-sm" style={{ color: 'var(--c-primary)' }}>{t('share_desc')}</p>
-          </div>
-          <div className="label-xs" style={{ paddingLeft: 4, marginTop: 8 }}>{t('share_settings')}</div>
-          <button className="action-row">
-            <div className="icon-wrap md neutral"><Clock size={22} /></div>
-            <div style={{ flex: 1 }}>
-              <div className="action-text">{t('share_exp')}</div>
-              <div className="action-desc">{t('share_exp_desc')}</div>
-            </div>
-            <ChevronRight size={18} color="var(--c-text-muted)" />
-          </button>
-          <button className="action-row">
-            <div className="icon-wrap md neutral"><Lock size={22} /></div>
-            <div style={{ flex: 1 }}>
-              <div className="action-text">{t('share_pwd')}</div>
-              <div className="action-desc">{t('share_pwd_desc')}</div>
-            </div>
-            <ChevronRight size={18} color="var(--c-text-muted)" />
-          </button>
-          <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px' }}>
-            <Link size={18} color="var(--c-primary-mid)" style={{ flexShrink: 0 }} />
-            <span className="body-sm truncate" style={{ flex: 1 }}>https://digisafe.app/s/a7f82b9...</span>
-            <button style={{ background: 'var(--c-primary-soft)', color: 'var(--c-primary)', fontFamily: 'Manrope', fontWeight: 700, fontSize: '0.8rem', padding: '7px 14px', borderRadius: 'var(--r-sm)', whiteSpace: 'nowrap' }}>
-              {t('copy')}
-            </button>
-          </div>
-          <button className="btn-secondary mt-4" onClick={onClose}>{t('close')}</button>
-        </div>
-    </BottomSheet>
-  )
-}
+/* QuickShareModal removed and moved to separate component folder */
 
 /* ================================================================
    PAGE — DASHBOARD (dynamic)
@@ -1429,7 +1386,7 @@ function AppContent() {
       <EditDocumentModal isOpen={modal === 'EDIT'} onClose={() => setModal(null)} doc={selectedDoc} />
       <IAScanModal isOpen={modal === 'SCAN'} onClose={() => setModal(null)} />
       <DeleteModal isOpen={modal === 'DELETE'} onClose={() => setModal(null)} onConfirm={handleDeleteConfirm} doc={selectedDoc} />
-      <QuickShareModal isOpen={modal === 'SHARE'} onClose={() => setModal(null)} />
+      <QuickShareModal isOpen={modal === 'SHARE'} onClose={() => setModal(null)} doc={selectedDoc} />
       <SecuritySettingsModal isOpen={modal === 'SECURITY'} onClose={() => setModal(null)} />
       <SettingsModal isOpen={modal === 'SETTINGS'} onClose={() => setModal(null)} />
       <AIChatModal isOpen={modal === 'CHAT'} onClose={() => setModal(null)} />
