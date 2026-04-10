@@ -805,6 +805,7 @@ function Library({ onDocClick }) {
 function DocumentDetail({ doc, onBack, onShare, onDeleteRequest, onEditRequest }) {
   const [isRevealed, setIsRevealed] = useState(false)
   const [realImageUrl, setRealImageUrl] = useState(null)
+  const [showAIModal, setShowAIModal] = useState(false)
   const lang = localStorage.getItem('digisafe_lang') || 'fr'
 
   if (!doc) return null
@@ -832,6 +833,20 @@ function DocumentDetail({ doc, onBack, onShare, onDeleteRequest, onEditRequest }
 
   const handleRevealStart = () => setIsRevealed(true)
   const handleRevealEnd = () => setIsRevealed(false)
+
+  // Fonction de téléchargement réelle
+  const handleDownload = async () => {
+    if (!realImageUrl) return alert("Le fichier n'est pas encore prêt ou introuvable.")
+    
+    // Créer un lien temporaire pour forcer le téléchargement
+    const link = document.createElement('a')
+    link.href = realImageUrl
+    link.download = doc.title || 'document'
+    link.target = '_blank'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
 
   // Fallback si pas de fichier ou erreur
   const fallbackUrl = "https://images.unsplash.com/photo-1618044733300-9472054094ee?q=80&w=600&auto=format&fit=crop"
@@ -918,10 +933,10 @@ function DocumentDetail({ doc, onBack, onShare, onDeleteRequest, onEditRequest }
           <button className="action-btn" onClick={onShare}>
             <div className="icon-wrap md neutral"><Share2 size={22} /></div>{t('share')}
           </button>
-          <button className="action-btn">
+          <button className="action-btn" onClick={() => setShowAIModal(true)}>
             <div className="icon-wrap md primary"><Zap size={22} /></div>{t('ai_summary')}
           </button>
-          <button className="action-btn">
+          <button className="action-btn" onClick={handleDownload}>
             <div className="icon-wrap md neutral"><Download size={22} /></div>{t('download')}
           </button>
           <button className="action-btn danger" onClick={onDeleteRequest}>
@@ -934,6 +949,26 @@ function DocumentDetail({ doc, onBack, onShare, onDeleteRequest, onEditRequest }
           <p className="body-sm">{t('detail_protected_by')}</p>
         </div>
       </div>
+
+      {/* Modal Résumé IA */}
+      <BottomSheet isOpen={showAIModal} onClose={() => setShowAIModal(false)} height="auto">
+        <div className="modal-header">
+           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Zap size={20} color="var(--c-primary)" />
+              <h2 className="title-md">{t('ai_summary')}</h2>
+           </div>
+           <button className="modal-close-btn" onClick={() => setShowAIModal(false)}><X size={18} /></button>
+        </div>
+        <div className="modal-body" style={{ paddingBottom: 40 }}>
+           <div className="insight-card" style={{ background: 'var(--c-primary-soft)', border: 'none', marginBottom: 20 }}>
+              <Sparkles size={20} color="var(--c-primary)" />
+              <p className="body-sm" style={{ color: 'var(--c-text)', lineHeight: 1.6 }}>
+                {doc.description || (lang === 'en' ? "AI analysis is only available for scanned documents." : "L'analyse IA est uniquement disponible pour les documents scannés.")}
+              </p>
+           </div>
+           <button className="btn-secondary w-full" onClick={() => setShowAIModal(false)}>{t('close')}</button>
+        </div>
+      </BottomSheet>
     </div>
   )
 }

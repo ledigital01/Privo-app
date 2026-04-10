@@ -66,6 +66,7 @@ export const AppProvider = ({ children }) => {
         expiresAt: d.expires_at,
         iconName: d.icon_name || 'file',
         filePath: d.file_path,
+        description: d.description || '',
         createdAt: d.created_at
       }))
       setDocuments(docs)
@@ -100,7 +101,8 @@ export const AppProvider = ({ children }) => {
         type: docData.category || docData.type || 'Autre',
         expires_at: docData.expiresAt || null,
         icon_name: docData.iconName || 'file',
-        file_path: filePath
+        file_path: filePath,
+        description: docData.description || null
       }
       
       const { data, error } = await supabase
@@ -119,6 +121,7 @@ export const AppProvider = ({ children }) => {
         expiresAt: data[0].expires_at,
         iconName: data[0].icon_name || 'file',
         filePath: data[0].file_path,
+        description: data[0].description || '',
         createdAt: data[0].created_at
       }
 
