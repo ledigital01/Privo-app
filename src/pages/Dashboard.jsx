@@ -92,7 +92,10 @@ const Dashboard = ({ onAddClick, onEmergencyClick }) => {
       </section>
 
       {/* Quick Action Overlay Section */}
-      <section className="bg-gradient-to-br from-[#003d9b] to-[#001848] rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl">
+      <section 
+        className="bg-gradient-to-br from-[#003d9b] to-[#001848] rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl cursor-pointer active:scale-[0.98] transition-all"
+        onClick={onEmergencyClick}
+      >
         <div className="relative z-10">
           <h2 className="font-headline text-2xl font-bold mb-4 flex items-center gap-2">
             🚨 Mode Urgence
@@ -100,12 +103,9 @@ const Dashboard = ({ onAddClick, onEmergencyClick }) => {
           <p className="text-white/80 mb-6 text-[15px] leading-relaxed">
             Préparez vos documents critiques pour un accès immédiat.
           </p>
-          <button 
-            onClick={onEmergencyClick}
-            className="bg-white text-[#003d9b] px-5 py-2.5 rounded-xl font-headline font-bold flex items-center gap-2 shadow-xl hover:bg-[#eceef0] transition-colors active:scale-95"
-          >
+          <div className="bg-white text-[#003d9b] w-max px-5 py-2.5 rounded-xl font-headline font-bold flex items-center gap-2 shadow-xl">
             <Shield size={18} /> Activer l'accès
-          </button>
+          </div>
         </div>
         
         {/* Decorator */}

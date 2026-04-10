@@ -1354,15 +1354,17 @@ function AppContent() {
   const navigate = useNavigate()
   const { deleteDocument } = useApp()
 
-  const [modal, setModal] = useState(null) // 'ADD' | 'SCAN' | 'SHARE' | 'DELETE'
-  const [selectedDoc, setSelectedDoc] = useState(null)
+  const [modal, setModal] = useState(null)
+  const [selectedDocId, setSelectedDocId] = useState(null)
+  
+  const selectedDoc = documents.find(d => d.id === selectedDocId)
 
-  const handleDocClick = (doc) => { setSelectedDoc(doc); navigate('/detail') }
+  const handleDocClick = (doc) => { setSelectedDocId(doc.id); navigate('/detail') }
   const handleScanClick = () => { setTimeout(() => setModal('SCAN'), 200) }
 
   const handleDeleteRequest = () => setModal('DELETE')
   const handleDeleteConfirm = () => {
-    deleteDocument(selectedDoc.id)
+    deleteDocument(selectedDocId)
     setModal(null)
     navigate('/documents')
   }
