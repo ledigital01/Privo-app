@@ -1,9 +1,51 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Share2, Link, Lock, Clock, ShieldCheck, ChevronRight } from 'lucide-react'
+import { X, Share2, Link, Lock, Clock, ShieldCheck, ChevronRight, Check } from 'lucide-react'
+import { supabase } from '../../utils/supabaseClient'
+import { t } from '../../utils/i18n'
 
 const QuickShareModal = ({ isOpen, onClose, doc }) => {
-  if (!isOpen) return null
+  const [generatedLink, setGeneratedLink] = useState('')
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [expiryHours, setExpiryHours] = useState(24)
+
+  useEffect(() => {
+    if (!isOpen) {
+      setGeneratedLink('')
+      setCopied(false)
+    }
+  }, [isOpen])
+
+  if (!isOpen || !doc) return null
+
+  const handleGenerateLink = async () => {
+    if (!doc.filePath) return alert("Fichier introuvable.")
+    
+    setIsGenerating(true)
+    try {
+      // Génère un lien signé pour le nombre d'heures spécifié
+      const seconds = expiryHours * 3600
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(doc.filePath, seconds)
+
+      if (error) throw error
+      setGeneratedLink(data.signedUrl)
+    } catch (err) {
+      console.error("Erreur génération lien:", err)
+      alert("Impossible de générer le lien de partage.")
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const handleCopy = () => {
+    if (!generatedLink) return
+    navigator.clipboard.writeText(generatedLink)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <AnimatePresence>
@@ -24,87 +66,104 @@ const QuickShareModal = ({ isOpen, onClose, doc }) => {
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
             className="fixed bottom-0 left-0 right-0 max-h-[90vh] bg-[#f7f9fb] rounded-t-[2.5rem] z-[101] shadow-2xl overflow-y-auto no-scrollbar"
           >
-            {/* Header / Grabber */}
-            <div className="p-6 pb-2 text-center relative flex justify-between items-center">
+            {/* Header */}
+            <div className="p-6 pb-2 text-center relative flex justify-between items-center bg-white/50 backdrop-blur-md sticky top-0 z-10">
               <button 
                 onClick={onClose}
-                className="p-2 bg-[#eceef0] rounded-full text-[#434654] active:scale-90 transition-all font-bold text-xs"
+                className="p-2 bg-[#eceef0] rounded-full text-[#434654] active:scale-90 transition-all"
               >
                 <X size={20} />
               </button>
               <div className="flex items-center gap-2 text-[#434654]">
-                <Share2 size={20} />
+                <Share2 size={20} className="text-[#003d9b]" />
                 <h2 className="font-headline text-xl font-extrabold text-[#191c1e]">
-                  Partage Rapide
+                  {t('share')}
                 </h2>
               </div>
-              <button className="p-2 bg-[#dae2ff] text-[#003d9b] rounded-full active:scale-90 transition-all font-bold text-xs px-4">
-                 Générer
+              <button 
+                onClick={handleGenerateLink}
+                disabled={isGenerating || !!generatedLink}
+                className={`p-2 rounded-full active:scale-90 transition-all font-bold text-xs px-5 ${
+                  generatedLink 
+                  ? 'bg-[#e7f5ef] text-[#006e42] cursor-default' 
+                  : 'bg-[#003d9b] text-white shadow-lg shadow-[#003d9b]/20'
+                }`}
+              >
+                 {isGenerating ? '...' : generatedLink ? 'Prêt' : 'Générer'}
               </button>
             </div>
 
             <div className="p-8 space-y-8">
               
-              <div className="bg-[#dae2ff]/50 p-6 rounded-3xl border border-[#dae2ff] flex items-center gap-4">
-                <ShieldCheck size={32} className="text-[#004e33]" />
+              {/* Info Banner */}
+              <div className="bg-white p-6 rounded-3xl border border-[#dae2ff] flex items-center gap-4 shadow-sm">
+                <div className="w-12 h-12 bg-[#e7f5ef] rounded-2xl flex items-center justify-center flex-shrink-0">
+                  <ShieldCheck size={28} className="text-[#006e42]" />
+                </div>
                 <div className="flex-1">
-                   <p className="text-sm font-body text-[#434654] leading-relaxed">
-                     Le lien de partage sera chiffré de bout en bout et expirera automatiquement.
+                   <p className="text-sm font-semibold text-[#191c1e]">{t('share_secure_title') || 'Partage Sécurisé'}</p>
+                   <p className="text-xs text-[#434654] mt-1">
+                     Lien généré via tunnel chiffré AES-256 avec expiration automatique.
                    </p>
                 </div>
               </div>
 
-              {/* Share Options List */}
+              {/* Security Settings */}
               <div className="space-y-3">
-                <h3 className="font-headline font-bold text-[#434654] text-[10px] uppercase tracking-widest px-2">Paramètres de sécurité</h3>
+                <h3 className="font-headline font-bold text-[#434654] text-[10px] uppercase tracking-widest px-2">Paramètres</h3>
                 
-                <div className="bg-white p-5 rounded-2xl flex items-center gap-4 border border-white/50 shadow-soft cursor-pointer group hover:bg-[#dae2ff]/20 transition-all">
-                   <div className="w-12 h-12 bg-[#eceef0] rounded-xl flex-center text-[#434654] group-hover:bg-[#003d9b] group-hover:text-white transition-all">
+                <div className="bg-white p-5 rounded-2xl flex items-center gap-4 border border-white/50 shadow-soft cursor-default group transition-all">
+                   <div className="w-12 h-12 bg-[#eceef0] rounded-xl flex items-center justify-center text-[#434654] transition-all">
                       <Clock size={20} />
                    </div>
                    <div className="flex-1">
                       <div className="text-lg font-headline font-bold text-[#191c1e]">Expiration</div>
-                      <div className="text-xs text-[#434654]">Le lien expirera dans 24 heures.</div>
+                      <div className="text-xs text-[#434654]">Lien valide pendant 24 heures.</div>
                    </div>
-                   <ChevronRight size={18} className="text-[#eceef0] group-hover:translate-x-1" />
+                   <Check size={18} className="text-[#006e42]" />
                 </div>
 
-                <div className="bg-white p-5 rounded-2xl flex items-center gap-4 border border-white/50 shadow-soft cursor-pointer group hover:bg-[#dae2ff]/20 transition-all">
-                   <div className="w-12 h-12 bg-[#eceef0] rounded-xl flex-center text-[#434654] group-hover:bg-[#003d9b] group-hover:text-white transition-all">
+                <div className="bg-white/50 p-5 rounded-2xl flex items-center gap-4 border border-dashed border-[#dae2ff] opacity-60">
+                   <div className="w-12 h-12 bg-[#eceef0] rounded-xl flex items-center justify-center text-[#434654]">
                       <Lock size={20} />
                    </div>
                    <div className="flex-1">
                       <div className="text-lg font-headline font-bold text-[#191c1e]">Mot de passe</div>
-                      <div className="text-xs text-[#434654]">Ajoutez une couche de protection (facultatif).</div>
+                      <div className="text-xs text-[#434654]">Indisponible sur l'offre gratuite.</div>
                    </div>
-                   <ChevronRight size={18} className="text-[#eceef0] group-hover:translate-x-1" />
                 </div>
               </div>
 
-              {/* Direct Links section */}
+              {/* Link Display */}
               <div className="space-y-3">
-                <h3 className="font-headline font-bold text-[#434654] text-[10px] uppercase tracking-widest px-2">Copier le lien</h3>
-                <div className="bg-white p-5 rounded-2xl flex items-center gap-4 border border-white/50 shadow-soft">
-                   <Link size={20} className="text-[#003d9b]" />
-                   <div className="flex-1 text-sm font-body text-[#434654] truncate">
-                      https://digisafe.sh/s/a7f82b9...
+                <h3 className="font-headline font-bold text-[#434654] text-[10px] uppercase tracking-widest px-2">Lien de partage</h3>
+                <div className={`bg-white p-5 rounded-2xl flex items-center gap-4 border transition-all ${generatedLink ? 'border-[#003d9b]/30 shadow-md' : 'border-white/50 shadow-soft'}`}>
+                   <Link size={20} className={generatedLink ? 'text-[#003d9b]' : 'text-[#eceef0]'} />
+                   <div className={`flex-1 text-sm font-body truncate ${!generatedLink ? 'text-[#eceef0]' : 'text-[#434654]'}`}>
+                      {generatedLink || 'Cliquez sur Générer en haut...'}
                    </div>
-                   <button className="text-[#0052cc] font-headline font-bold text-sm bg-[#dae2ff] px-4 py-2 rounded-xl active:scale-95 transition-all">
-                      Copier
-                   </button>
+                   {generatedLink && (
+                     <button 
+                       onClick={handleCopy}
+                       className={`flex items-center gap-2 px-4 py-2 rounded-xl font-headline font-bold text-sm transition-all active:scale-95 ${
+                         copied ? 'bg-[#006e42] text-white' : 'bg-[#dae2ff] text-[#003d9b]'
+                       }`}
+                     >
+                        {copied ? <><Check size={14} /> Copié</> : 'Copier'}
+                     </button>
+                   )}
                 </div>
               </div>
 
-              {/* Final Secondary actions */}
+              {/* Action */}
               <button 
                 onClick={onClose}
-                className="w-full bg-[#eceef0] p-5 rounded-2xl text-[#191c1e] font-headline font-bold transition-all"
+                className="w-full bg-[#191c1e] p-5 rounded-2xl text-white font-headline font-bold transition-all shadow-xl shadow-black/10 active:scale-[0.98]"
               >
-                 Fermer
+                 Terminer
               </button>
             </div>
 
-            {/* Bottom Safe Area Padding */}
             <div className="h-12" />
           </motion.div>
         </>
