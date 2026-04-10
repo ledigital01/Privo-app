@@ -34,25 +34,25 @@ serve(async (req) => {
       throw downloadError
     }
 
-    // 3. Convertir (Correction : Méthode robuste pour gros fichiers)
+    // 3. Convertir (Correction : Méthode optimisée pour photos lourdes)
     console.log(`[INFO] Encodage Base64...`)
     const arrayBuffer = await fileData.arrayBuffer()
     const uint8Array = new Uint8Array(arrayBuffer)
-    let binary = ''
-    const chunk = 8192
-    for (let i = 0; i < uint8Array.length; i += chunk) {
-      binary += String.fromCharCode.apply(null, uint8Array.slice(i, i + chunk))
-    }
-    const base64Str = btoa(binary)
+    
+    // Chunking plus agressif et propre pour éviter les erreurs de pile (stack overflow)
+    const base64Str = btoa(
+      Array.from(uint8Array)
+        .map(byte => String.fromCharCode(byte))
+        .join('')
+    )
+    
     const mimeType = fileData.type || 'image/jpeg'
-    const base64Url = `data:${mimeType};base64,${base64Str}`
+    console.log(`[INFO] Type détecté: ${mimeType}, Taille: ${uint8Array.length} bytes`)
 
-    // 4. Appel à l'API Anthropic Claude 3.5 Sonnet (Le plus précis pour la vision)
+    // 4. Appel à l'IA (Modèle: claude-sonnet-4-6)
     const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')
     if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY n'est pas configuré dans Supabase.")
 
-    console.log(`[INFO] Appel API Anthropic Claude 3.5 Sonnet...`)
-    
     const promptText = `
       Analyse ce document de manière ultra-précise.
       Réponds UNIQUEMENT avec cet objet JSON valide :
@@ -83,7 +83,7 @@ serve(async (req) => {
               type: mimeType === "application/pdf" ? "document" : "image",
               source: {
                 type: "base64",
-                media_type: mimeType,
+                media_type: mimeType === "application/pdf" ? "application/pdf" : mimeType,
                 data: base64Str
               }
             },
