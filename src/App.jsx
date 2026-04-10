@@ -18,6 +18,7 @@ import BottomSheet from './components/BottomSheet'
 import { t } from './utils/i18n'
 import { supabase } from './utils/supabaseClient'
 import QuickShareModal from './components/Modals/QuickShareModal'
+import SharePage from './pages/SharePage'
 
 /* ================================================================
    ICON MAP — converts stored string → JSX icon
@@ -1823,7 +1824,7 @@ function AppLockScreen({ children }) {
 /* ================================================================
    AUTH GUARD — shows Login/Register if not authenticated
    ================================================================ */
-function AuthGuard() {
+function AuthGuard({ children }) {
   const { isAuthenticated, profileLoading } = useApp()
   const [authPage, setAuthPage] = useState('login') // 'login' | 'register'
 
@@ -1835,13 +1836,7 @@ function AuthGuard() {
       : <RegisterPage onGoLogin={() => setAuthPage('login')} />
   }
 
-  return (
-    <Router>
-      <AppLockScreen>
-        <AppContent />
-      </AppLockScreen>
-    </Router>
-  )
+  return children
 }
 
 export default function App() {
@@ -1853,7 +1848,21 @@ export default function App() {
 
   return (
     <AppProvider>
-      <AuthGuard />
+      <Router>
+        <Routes>
+          {/* Route publique de partage */}
+          <Route path="/s/:id" element={<SharePage />} />
+          
+          {/* Toutes les autres routes sont protégées */}
+          <Route path="/*" element={
+            <AuthGuard>
+              <AppLockScreen>
+                <AppContent />
+              </AppLockScreen>
+            </AuthGuard>
+          } />
+        </Routes>
+      </Router>
     </AppProvider>
   )
 }

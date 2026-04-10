@@ -15,22 +15,36 @@ const QuickShareModal = ({ isOpen, onClose, doc }) => {
   if (!isOpen) return null
 
   const handleGenerate = async () => {
-    if (!doc?.filePath) return alert("Fichier introuvable.")
+    if (!doc?.id) return alert("Document introuvable.")
     
     setIsGenerating(true)
     setCopied(false)
     
     try {
-      const { data, error } = await supabase.storage
-        .from('documents')
-        .createSignedUrl(doc.filePath, expiryHours * 3600)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error("Non authentifié")
+
+      const expiresAt = new Date(Date.now() + expiryHours * 3600 * 1000).toISOString()
+
+      // On insère l'entrée de partage dans la nouvelle table
+      const { data, error } = await supabase
+        .from('document_shares')
+        .insert([{
+          document_id: doc.id,
+          user_id: user.id,
+          password: password || null,
+          expires_at: expiresAt
+        }])
+        .select()
+        .single()
 
       if (error) throw error
       
-      setGeneratedLink(data.signedUrl)
+      const shareUrl = `${window.location.origin}/s/${data.id}`
+      setGeneratedLink(shareUrl)
     } catch (err) {
       console.error("Erreur de partage:", err)
-      alert("Impossible de générer le lien de partage.")
+      alert("Impossible de générer le lien de partage : " + err.message)
     } finally {
       setIsGenerating(false)
     }
