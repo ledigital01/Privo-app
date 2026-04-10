@@ -1352,7 +1352,7 @@ function ProfilePage({ onSecurityClick, onSettingsClick }) {
 
 function AppContent() {
   const navigate = useNavigate()
-  const { deleteDocument } = useApp()
+  const { documents, deleteDocument } = useApp()
 
   const [modal, setModal] = useState(null)
   const [selectedDocId, setSelectedDocId] = useState(null)
