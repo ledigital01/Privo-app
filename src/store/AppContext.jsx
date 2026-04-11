@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react'
 import { supabase } from '../utils/supabaseClient'
+import { PLAN_LIMITS } from '../utils/plans'
 
 const AppContext = createContext()
 
@@ -18,225 +19,136 @@ export const AppProvider = ({ children }) => {
           id: session.user.id,
           email: session.user.email,
           name: session.user.user_metadata?.first_name || 'Utilisateur',
-          lastName: session.user.user_metadata?.last_name || '',
-          initials: (session.user.user_metadata?.first_name?.[0] || 'U').toUpperCase(),
           plan: 'free'
         })
-        fetchDocuments(session.user.id)
+        
+        const { data: profile } = await supabase.from('profiles').select('plan').eq('id', session.user.id).single()
+        if (profile) setAuthUser(prev => ({ ...prev, plan: profile.plan || 'free' }))
       }
       setLoading(false)
     }
-
     initSession()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session) {
         setAuthUser({
           id: session.user.id,
           email: session.user.email,
           name: session.user.user_metadata?.first_name || 'Utilisateur',
-          lastName: session.user.user_metadata?.last_name || '',
-          initials: (session.user.user_metadata?.first_name?.[0] || 'U').toUpperCase(),
           plan: 'free'
         })
-        fetchDocuments(session.user.id)
+        const { data: profile } = await supabase.from('profiles').select('plan').eq('id', session.user.id).single()
+        if (profile) setAuthUser(prev => ({ ...prev, plan: profile.plan || 'free' }))
       } else {
         setAuthUser(null)
         setDocuments([])
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => authListener.subscription.unsubscribe()
   }, [])
 
-  // 2. Charger les documents
-  const fetchDocuments = async (userId) => {
-    const { data, error } = await supabase
-      .from('documents')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
+  // 2. Chargement des documents
+  useEffect(() => {
+    if (!authUser) return
 
-    if (!error && data) {
-      // Transformation des noms de colonnes SQL -> State React
-      const docs = data.map(d => ({
-        id: d.id,
-        title: d.title,
-        type: d.type,
-        expiresAt: d.expires_at,
-        iconName: d.icon_name || 'file',
-        filePath: d.file_path,
-        description: d.description || '',
-        isEmergency: d.is_emergency || false,
-        createdAt: d.created_at
-      }))
-      setDocuments(docs)
-    }
-  }
-
-  // 3. AJOUTER UN DOCUMENT (CORRIGÉ ✅)
-  const addDocument = async (docData, file) => {
-    if (!authUser) return { error: "Non authentifié" }
-
-    try {
-      let filePath = docData.filePath || null
-
-      // Upload du fichier si présent (écrase le filePath si un nouveau fichier est fourni)
-      if (file) {
-        const fileExt = file.name.split('.').pop()
-        const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`
-        const path = `${authUser.id}/${fileName}`
-
-        const { error: uploadError } = await supabase.storage
-          .from('documents')
-          .upload(path, file)
-
-        if (uploadError) throw uploadError
-        filePath = path
-      }
-
-      // Insertion en BDD
-      const insertPayload = {
-        user_id: authUser.id,
-        title: docData.title,
-        type: docData.category || docData.type || 'Autre',
-        expires_at: docData.expiresAt || null,
-        icon_name: docData.iconName || 'file',
-        file_path: filePath,
-        description: docData.description || null
-      }
-      
+    const loadDocs = async () => {
       const { data, error } = await supabase
         .from('documents')
-        .insert([insertPayload])
-        .select()
-
-      if (error) throw error
-
-      // --- LA CORRECTION EST ICI ---
-      // On transforme le résultat de Supabase pour correspondre à notre state
-      const newDoc = {
-        id: data[0].id,
-        title: data[0].title,
-        type: data[0].type,
-        expiresAt: data[0].expires_at,
-        iconName: data[0].icon_name || 'file',
-        filePath: data[0].file_path,
-        description: data[0].description || '',
-        isEmergency: data[0].is_emergency || false,
-        createdAt: data[0].created_at
-      }
-
-      // On ajoute le nouveau document en haut de la liste locale immédiatement !
-      setDocuments(prev => [newDoc, ...prev])
-
-      return { success: true, data: newDoc }
-
-    } catch (err) {
-      console.error("Erreur addDoc:", err)
-      return { error: err.message }
+        .select('*')
+        .eq('user_id', authUser.id)
+        .order('created_at', { ascending: false })
+      
+      if (!error) setDocuments(data)
     }
-  }
 
-  // 3. Authentification (Login / Register)
-  const login = async (email, password) => {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) throw error
-      return { success: true, user: data.user }
-    } catch (err) {
-      console.error("Erreur login:", err)
-      return { success: false, error: err.message }
+    loadDocs()
+
+    // Realtime cleanup / subscription if needed
+  }, [authUser])
+
+  // ACTIONS
+  const addDocument = async (doc) => {
+    const { data, error } = await supabase
+      .from('documents')
+      .insert([{ ...doc, user_id: authUser.id }])
+      .select()
+    
+    if (!error && data) {
+      setDocuments(prev => [data[0], ...prev])
+      return { success: true, data: data[0] }
     }
+    return { success: false, error: error?.message }
   }
 
-  const register = async (email, password, firstName, lastName) => {
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-          }
-        }
-      })
-      if (error) throw error
-      return { success: true, user: data.user }
-    } catch (err) {
-      console.error("Erreur register:", err)
-      return { success: false, error: err.message }
+  const updateDocument = async (id, updates) => {
+    const { data, error } = await supabase
+      .from('documents')
+      .update(updates)
+      .eq('id', id)
+      .select()
+    
+    if (!error && data) {
+      setDocuments(prev => prev.map(d => d.id === id ? data[0] : d))
+      return { success: true }
     }
+    return { success: false, error: error?.message }
   }
 
-  const logout = async () => {
-    await supabase.auth.signOut()
-    setAuthUser(null)
-    setDocuments([])
-  }
-
-  // 4. Supprimer un document
   const deleteDocument = async (id) => {
     const { error } = await supabase.from('documents').delete().eq('id', id)
     if (!error) {
       setDocuments(prev => prev.filter(d => d.id !== id))
-    }
-  }
-
-  // 5. Mettre à jour un document
-  const updateDocument = async (id, updates) => {
-    // Conversion React -> SQL
-    const sqlUpdates = {}
-    if (updates.title !== undefined) sqlUpdates.title = updates.title
-    if (updates.type !== undefined) sqlUpdates.type = updates.type
-    if (updates.expiresAt !== undefined) sqlUpdates.expires_at = updates.expiresAt
-    if (updates.iconName !== undefined) sqlUpdates.icon_name = updates.iconName
-    if (updates.description !== undefined) sqlUpdates.description = updates.description
-    if (updates.isEmergency !== undefined) sqlUpdates.is_emergency = updates.isEmergency
-
-    const { data, error } = await supabase
-      .from('documents')
-      .update(sqlUpdates)
-      .eq('id', id)
-      .select()
-
-    if (!error && data) {
-      setDocuments(prev => prev.map(d => d.id === id ? { ...d, ...updates } : d))
       return { success: true }
     }
-    return { error: error?.message }
+    return { success: false, error: error?.message }
   }
 
-  // 6. Basculer le mode urgence
-  const toggleEmergency = async (id, status) => {
-    return updateDocument(id, { isEmergency: status })
+  const toggleEmergency = async (id, isEmergency) => {
+    return updateDocument(id, { isEmergency })
   }
 
-  // Stats calculées
-  const stats = useMemo(() => {
-    const now = new Date()
-    const soon = new Date(now.getTime() + (30 * 24 * 60 * 60 * 1000))
-    return {
-      total: documents.length,
-      expiringSoon: documents.filter(d => d.expiresAt && new Date(d.expiresAt) < soon).length,
-      recent: documents.filter(d => new Date(d.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length
-    }
-  }, [documents])
-
-  const expiringDocs = useMemo(() => {
-    const soon = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-    return documents.filter(d => d.expiresAt && new Date(d.expiresAt) < soon)
-  }, [documents])
-
+  // MEMOS
   const filteredDocuments = useMemo(() => {
-    return documents.filter(d => d.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    if (!searchQuery) return documents
+    const q = searchQuery.toLowerCase()
+    return documents.filter(d => 
+      d.title.toLowerCase().includes(q) || 
+      d.type?.toLowerCase().includes(q) ||
+      d.category?.toLowerCase().includes(q)
+    )
   }, [documents, searchQuery])
 
+  const stats = useMemo(() => ({
+    total: documents.length,
+    expiring: documents.filter(d => d.expiry_date && (new Date(d.expiry_date) - new Date()) / (1000 * 60 * 60 * 24) < 30).length,
+    recent: documents.filter(d => (new Date() - new Date(d.created_at)) / (1000 * 60 * 60 * 24) < 7).length
+  }), [documents])
+
+  const expiringDocs = useMemo(() => 
+    documents.filter(d => d.expiry_date && (new Date(d.expiry_date) - new Date()) / (1000 * 60 * 60 * 24) < 30)
+  , [documents])
+
+  const canAddDoc = useMemo(() => {
+    if (!authUser) return false
+    const limit = PLAN_LIMITS[authUser.plan]?.maxDocs || 5
+    return documents.length < limit
+  }, [authUser, documents])
+
   const value = {
-    authUser, documents, loading, stats, expiringDocs, searchQuery, filteredDocuments,
-    setSearchQuery, addDocument, deleteDocument, updateDocument, toggleEmergency, logout, login, register, 
-    isAuthenticated: !!authUser
+    authUser,
+    documents,
+    filteredDocuments,
+    loading,
+    searchQuery,
+    setSearchQuery,
+    addDocument,
+    updateDocument,
+    deleteDocument,
+    toggleEmergency,
+    stats,
+    expiringDocs,
+    canAddDoc
   }
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
