@@ -241,7 +241,11 @@ function IAScanModal({ isOpen, onClose }) {
     setFormData({ title: '', category: 'Autre', expiresAt: '', issuer: '', description: '', tags: [] })
   }
 
-  const handleClose = () => { if (step !== 'processing' && step !== 'review') { reset(); onClose(); } }
+  const handleClose = () => { 
+    if (step === 'processing') return // Block close only during active processing
+    reset()
+    onClose()
+  }
 
   const handleFileChange = async (e) => {
     const selectedFile = e.target.files[0]
@@ -286,8 +290,8 @@ function IAScanModal({ isOpen, onClose }) {
       }
     } catch (error) {
       console.error("[SCAN] Erreur critique:", error)
-      alert(`Oups ! Quelque chose coince : ${error.message}`) // Feedback direct sur l'écran
-      setStep('review') // On passe en manuel en cas d'erreur pour ne pas bloquer l'utilisateur
+      alert(`Oups ! Quelque chose coince : ${error.message}`) 
+      setStep('review') 
     }
   }
 
@@ -295,24 +299,35 @@ function IAScanModal({ isOpen, onClose }) {
   const handleAddVerso = async (e) => {
     const versoFile = e.target.files[0]
     if (!versoFile) return
-    // On pourrait uploader ça aussi si on le voulait. Pour l'instant, c'est juste un placeholder visuel
     alert("Verso ajouté avec succès ! Il sera fusionné avec votre document.")
   }
 
   const handleFinalSave = async () => {
-    setIsSaving(true)
-    // On passe le filePath déjà existant au lieu du fichier brut pour éviter le double upload
-    const result = await addDocument({ ...formData, filePath }, null)
-    
-    if (result.error) {
-      alert(`Erreur lors de l'archivage: ${result.error}`)
-      setIsSaving(false)
-      return
-    }
+    try {
+      setIsSaving(true)
+      console.log("[SCAN] Final Save payload:", { ...formData, filePath })
+      
+      const result = await addDocument({ 
+        ...formData, 
+        filePath,
+        iconName: getIconByCategory(formData.category) 
+      }, null)
+      
+      if (result.error) {
+        console.error("[SCAN] AddDocument Error:", result.error)
+        alert(`Erreur lors de l'archivage: ${result.error}`)
+        setIsSaving(false)
+        return
+      }
 
-    setStep('done')
-    if (window.navigator.vibrate) window.navigator.vibrate(50) // Vibration succès sur mobile
-    setTimeout(() => { reset(); onClose(); }, 2000)
+      setStep('done')
+      if (window.navigator.vibrate) window.navigator.vibrate(50)
+      setTimeout(() => { reset(); onClose(); }, 2000)
+    } catch (err) {
+      console.error("[SCAN] Final Save Crash:", err)
+      alert(`Erreur imprévue: ${err.message}`)
+      setIsSaving(false)
+    }
   }
 
   if (!isOpen) return null
