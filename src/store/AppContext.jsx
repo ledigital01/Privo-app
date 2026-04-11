@@ -15,24 +15,46 @@ export const AppProvider = ({ children }) => {
   // 1. Initialisation de la session + récupération du profil complet
   // ----------------------------------------------------------------
   const buildUserFromSession = async (session) => {
-    // Récupérer le profil + plan depuis la table profiles
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('first_name, last_name, initials, plan, shares_this_month, shares_reset_at')
-      .eq('id', session.user.id)
-      .single()
+    let plan = 'free'
+    let sharesThisMonth = 0
+    let profileName = session.user.user_metadata?.first_name || 'Utilisateur'
+    let profileLastName = session.user.user_metadata?.last_name || ''
+    let profileInitials = (profileName[0] || 'U').toUpperCase()
 
-    const plan = profile?.plan || 'free'
+    try {
+      // Timeout de sécurité : si Supabase ne répond pas en 5s, on continue quand même
+      const profilePromise = supabase
+        .from('profiles')
+        .select('first_name, last_name, initials, plan, shares_this_month')
+        .eq('id', session.user.id)
+        .single()
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 5000)
+      )
+
+      const { data: profile, error } = await Promise.race([profilePromise, timeoutPromise])
+
+      if (!error && profile) {
+        plan = profile.plan || 'free'
+        sharesThisMonth = profile.shares_this_month || 0
+        profileName = profile.first_name || profileName
+        profileLastName = profile.last_name || profileLastName
+        profileInitials = profile.initials || profileInitials
+      }
+    } catch (err) {
+      // Silently fall back to metadata if profiles table is unavailable
+      console.warn('Profile fetch failed, using metadata fallback:', err.message)
+    }
 
     setAuthUser({
       id: session.user.id,
       email: session.user.email,
-      name: profile?.first_name || session.user.user_metadata?.first_name || 'Utilisateur',
-      lastName: profile?.last_name || session.user.user_metadata?.last_name || '',
-      initials: profile?.initials || (session.user.user_metadata?.first_name?.[0] || 'U').toUpperCase(),
+      name: profileName,
+      lastName: profileLastName,
+      initials: profileInitials,
       plan,
-      sharesThisMonth: profile?.shares_this_month || 0,
-      sharesResetAt: profile?.shares_reset_at || null,
+      sharesThisMonth,
     })
 
     return { userId: session.user.id, plan }
