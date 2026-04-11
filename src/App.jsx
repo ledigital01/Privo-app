@@ -1364,15 +1364,26 @@ function ProfilePage({ onSecurityClick, onSettingsClick }) {
 
 function AppContent() {
   const navigate = useNavigate()
-  const { documents, deleteDocument } = useApp()
+  const { documents, deleteDocument, authUser, planLimits } = useApp()
 
   const [modal, setModal] = useState(null)
+  const [planLimitMsg, setPlanLimitMsg] = useState(null)
   const [selectedDocId, setSelectedDocId] = useState(null)
   
   const selectedDoc = documents.find(d => d.id === selectedDocId)
 
   const handleDocClick = (doc) => { setSelectedDocId(doc.id); navigate('/detail') }
-  const handleScanClick = () => { setTimeout(() => setModal('SCAN'), 200) }
+  
+  // ✅ Vérification du plan avant d'ouvrir le modal d'ajout
+  const handleScanClick = () => {
+    const maxDocs = planLimits?.maxDocuments ?? 5
+    if (documents.length >= maxDocs) {
+      setPlanLimitMsg(`Vous avez atteint la limite de ${maxDocs} documents pour le plan ${authUser?.plan === 'free' ? 'Gratuit' : authUser?.plan}.`)
+      setModal('PLAN_LIMIT')
+      return
+    }
+    setTimeout(() => setModal('SCAN'), 200)
+  }
 
   const handleDeleteRequest = () => setModal('DELETE')
   const handleDeleteConfirm = () => {
@@ -1427,6 +1438,51 @@ function AppContent() {
       <SettingsModal isOpen={modal === 'SETTINGS'} onClose={() => setModal(null)} />
       <AIChatModal isOpen={modal === 'CHAT'} onClose={() => setModal(null)} />
       <EmergencyPage isOpen={modal === 'EMERGENCY'} onClose={() => setModal(null)} />
+
+      {/* ✅ Modal — Limite de plan atteinte */}
+      <BottomSheet isOpen={modal === 'PLAN_LIMIT'} onClose={() => setModal(null)} height="auto">
+        <div className="modal-body" style={{ paddingBottom: 40, paddingTop: 8 }}>
+          <div style={{ textAlign: 'center', marginBottom: 28 }}>
+            <div style={{ width: 72, height: 72, borderRadius: '50%', background: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: '#D97706' }}>
+              <ShieldAlert size={36} />
+            </div>
+            <h2 className="title-md" style={{ marginBottom: 8 }}>Limite atteinte</h2>
+            <p className="body-sm" style={{ color: 'var(--c-text-muted)' }}>{planLimitMsg}</p>
+          </div>
+
+          {/* Barre de progression */}
+          <div style={{ background: 'var(--c-bg)', borderRadius: 12, padding: '16px', marginBottom: 24, border: '1px solid var(--c-border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--c-text)' }}>Documents utilisés</span>
+              <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--c-danger)' }}>{documents.length} / {planLimits?.maxDocuments ?? 5}</span>
+            </div>
+            <div style={{ height: 8, background: '#E5E7EB', borderRadius: 99 }}>
+              <div style={{ height: 8, background: 'var(--c-danger)', borderRadius: 99, width: `${Math.min(100, (documents.length / (planLimits?.maxDocuments ?? 5)) * 100)}%`, transition: 'width 0.5s' }} />
+            </div>
+          </div>
+
+          {/* Avantages Pro */}
+          <div style={{ background: 'linear-gradient(135deg, var(--c-primary), #0066ff)', borderRadius: 16, padding: '20px', marginBottom: 24, color: 'white' }}>
+            <div style={{ fontWeight: 800, fontSize: '1rem', marginBottom: 12 }}>🚀 Passez au Plan Pro</div>
+            {['100 documents', 'Scan IA avancé', 'Partage illimité', '5 Go de stockage'].map((f, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <Check size={16} color="white" />
+                <span style={{ fontSize: '0.85rem', opacity: 0.9 }}>{f}</span>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={() => { setModal(null); navigate('/subscription') }}
+            style={{ width: '100%', height: 56, background: 'var(--c-primary)', color: 'white', borderRadius: 16, fontWeight: 800, fontSize: '1rem', boxShadow: '0 8px 16px rgba(0,61,155,0.2)' }}
+          >
+            Voir les offres Pro →
+          </button>
+          <button onClick={() => setModal(null)} className="btn-secondary" style={{ width: '100%', height: 48, borderRadius: 16, marginTop: 12, border: 'none' }}>
+            Continuer avec le plan gratuit
+          </button>
+        </div>
+      </BottomSheet>
     </>
   )
 }

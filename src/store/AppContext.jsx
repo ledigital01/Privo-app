@@ -1,55 +1,72 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react'
 import { supabase } from '../utils/supabaseClient'
+import { canAddDocument, canShareDocument, hasFeature, getPlanLimits } from '../utils/plans'
 
 const AppContext = createContext()
 
 export const AppProvider = ({ children }) => {
   const [authUser, setAuthUser] = useState(null)
-  const [documents, setDocuments] = useState([])
+  const [documents, setDocuments] = useState([])\
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [planStatus, setPlanStatus] = useState(null) // { doc_count, shares_this_month, plan, ... }
 
-  // 1. Initialisation de la session
+  // ----------------------------------------------------------------
+  // 1. Initialisation de la session + récupération du profil complet
+  // ----------------------------------------------------------------
+  const buildUserFromSession = async (session) => {
+    // Récupérer le profil + plan depuis la table profiles
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('first_name, last_name, initials, plan, shares_this_month, shares_reset_at')
+      .eq('id', session.user.id)
+      .single()
+
+    const plan = profile?.plan || 'free'
+
+    setAuthUser({
+      id: session.user.id,
+      email: session.user.email,
+      name: profile?.first_name || session.user.user_metadata?.first_name || 'Utilisateur',
+      lastName: profile?.last_name || session.user.user_metadata?.last_name || '',
+      initials: profile?.initials || (session.user.user_metadata?.first_name?.[0] || 'U').toUpperCase(),
+      plan,
+      sharesThisMonth: profile?.shares_this_month || 0,
+      sharesResetAt: profile?.shares_reset_at || null,
+    })
+
+    return { userId: session.user.id, plan }
+  }
+
   useEffect(() => {
     const initSession = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
-        setAuthUser({
-          id: session.user.id,
-          email: session.user.email,
-          name: session.user.user_metadata?.first_name || 'Utilisateur',
-          lastName: session.user.user_metadata?.last_name || '',
-          initials: (session.user.user_metadata?.first_name?.[0] || 'U').toUpperCase(),
-          plan: 'free'
-        })
-        fetchDocuments(session.user.id)
+        const { userId } = await buildUserFromSession(session)
+        await fetchDocuments(userId)
       }
       setLoading(false)
     }
 
     initSession()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
-        setAuthUser({
-          id: session.user.id,
-          email: session.user.email,
-          name: session.user.user_metadata?.first_name || 'Utilisateur',
-          lastName: session.user.user_metadata?.last_name || '',
-          initials: (session.user.user_metadata?.first_name?.[0] || 'U').toUpperCase(),
-          plan: 'free'
-        })
-        fetchDocuments(session.user.id)
+        const { userId } = await buildUserFromSession(session)
+        await fetchDocuments(userId)
       } else {
         setAuthUser(null)
         setDocuments([])
+        setPlanStatus(null)
       }
     })
 
     return () => subscription.unsubscribe()
   }, [])
 
+  // ----------------------------------------------------------------
   // 2. Charger les documents
+  // ----------------------------------------------------------------
   const fetchDocuments = async (userId) => {
     const { data, error } = await supabase
       .from('documents')
@@ -58,7 +75,6 @@ export const AppProvider = ({ children }) => {
       .order('created_at', { ascending: false })
 
     if (!error && data) {
-      // Transformation des noms de colonnes SQL -> State React
       const docs = data.map(d => ({
         id: d.id,
         title: d.title,
@@ -74,14 +90,21 @@ export const AppProvider = ({ children }) => {
     }
   }
 
-  // 3. AJOUTER UN DOCUMENT (CORRIGÉ ✅)
+  // ----------------------------------------------------------------
+  // 3. Ajouter un document — avec vérification du plan
+  // ----------------------------------------------------------------
   const addDocument = async (docData, file) => {
     if (!authUser) return { error: "Non authentifié" }
+
+    // ✅ GARDE DU PLAN GRATUIT — vérification côté client (rapide)
+    const { canAdd, reason } = canAddDocument(authUser.plan, documents.length)
+    if (!canAdd) {
+      return { error: reason, planLimitReached: true }
+    }
 
     try {
       let filePath = docData.filePath || null
 
-      // Upload du fichier si présent (écrase le filePath si un nouveau fichier est fourni)
       if (file) {
         const fileExt = file.name.split('.').pop()
         const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`
@@ -95,7 +118,6 @@ export const AppProvider = ({ children }) => {
         filePath = path
       }
 
-      // Insertion en BDD
       const insertPayload = {
         user_id: authUser.id,
         title: docData.title,
@@ -105,16 +127,20 @@ export const AppProvider = ({ children }) => {
         file_path: filePath,
         description: docData.description || null
       }
-      
+
       const { data, error } = await supabase
         .from('documents')
         .insert([insertPayload])
         .select()
 
-      if (error) throw error
+      // ✅ Capturer l'erreur PLAN_LIMIT_REACHED du backend (trigger SQL)
+      if (error) {
+        if (error.message?.includes('PLAN_LIMIT_REACHED')) {
+          return { error: error.message.replace('PLAN_LIMIT_REACHED: ', ''), planLimitReached: true }
+        }
+        throw error
+      }
 
-      // --- LA CORRECTION EST ICI ---
-      // On transforme le résultat de Supabase pour correspondre à notre state
       const newDoc = {
         id: data[0].id,
         title: data[0].title,
@@ -127,9 +153,7 @@ export const AppProvider = ({ children }) => {
         createdAt: data[0].created_at
       }
 
-      // On ajoute le nouveau document en haut de la liste locale immédiatement !
       setDocuments(prev => [newDoc, ...prev])
-
       return { success: true, data: newDoc }
 
     } catch (err) {
@@ -138,14 +162,31 @@ export const AppProvider = ({ children }) => {
     }
   }
 
-  // 3. Authentification (Login / Register)
+  // ----------------------------------------------------------------
+  // 4. Partager un document — avec vérification du plan
+  // ----------------------------------------------------------------
+  const canShare = () => {
+    const { canShare: ok, reason } = canShareDocument(
+      authUser?.plan || 'free',
+      authUser?.sharesThisMonth || 0
+    )
+    return { ok, reason }
+  }
+
+  // ----------------------------------------------------------------
+  // 5. Vérifier l'accès aux fonctionnalités
+  // ----------------------------------------------------------------
+  const checkFeature = (feature) => hasFeature(authUser?.plan || 'free', feature)
+
+  // ----------------------------------------------------------------
+  // 6. Auth
+  // ----------------------------------------------------------------
   const login = async (email, password) => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
       return { success: true, user: data.user }
     } catch (err) {
-      console.error("Erreur login:", err)
       return { success: false, error: err.message }
     }
   }
@@ -155,17 +196,11 @@ export const AppProvider = ({ children }) => {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-          }
-        }
+        options: { data: { first_name: firstName, last_name: lastName } }
       })
       if (error) throw error
       return { success: true, user: data.user }
     } catch (err) {
-      console.error("Erreur register:", err)
       return { success: false, error: err.message }
     }
   }
@@ -174,9 +209,12 @@ export const AppProvider = ({ children }) => {
     await supabase.auth.signOut()
     setAuthUser(null)
     setDocuments([])
+    setPlanStatus(null)
   }
 
-  // 4. Supprimer un document
+  // ----------------------------------------------------------------
+  // 7. CRUD Documents
+  // ----------------------------------------------------------------
   const deleteDocument = async (id) => {
     const { error } = await supabase.from('documents').delete().eq('id', id)
     if (!error) {
@@ -184,9 +222,7 @@ export const AppProvider = ({ children }) => {
     }
   }
 
-  // 5. Mettre à jour un document
   const updateDocument = async (id, updates) => {
-    // Conversion React -> SQL
     const sqlUpdates = {}
     if (updates.title !== undefined) sqlUpdates.title = updates.title
     if (updates.type !== undefined) sqlUpdates.type = updates.type
@@ -208,21 +244,30 @@ export const AppProvider = ({ children }) => {
     return { error: error?.message }
   }
 
-  // 6. Basculer le mode urgence
   const toggleEmergency = async (id, status) => {
     return updateDocument(id, { isEmergency: status })
   }
 
-  // Stats calculées
+  // ----------------------------------------------------------------
+  // 8. Stats & Computed values
+  // ----------------------------------------------------------------
+  const planLimits = useMemo(() => getPlanLimits(authUser?.plan || 'free'), [authUser?.plan])
+
   const stats = useMemo(() => {
     const now = new Date()
     const soon = new Date(now.getTime() + (30 * 24 * 60 * 60 * 1000))
     return {
       total: documents.length,
       expiringSoon: documents.filter(d => d.expiresAt && new Date(d.expiresAt) < soon).length,
-      recent: documents.filter(d => new Date(d.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length
+      recent: documents.filter(d => new Date(d.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length,
+      // Infos plan
+      docsUsed: documents.length,
+      docsMax: planLimits.maxDocuments,
+      docsPercent: planLimits.maxDocuments === Infinity ? 0 : Math.round((documents.length / planLimits.maxDocuments) * 100),
+      sharesUsed: authUser?.sharesThisMonth || 0,
+      sharesMax: planLimits.maxSharesPerMonth,
     }
-  }, [documents])
+  }, [documents, authUser, planLimits])
 
   const expiringDocs = useMemo(() => {
     const soon = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
@@ -234,8 +279,24 @@ export const AppProvider = ({ children }) => {
   }, [documents, searchQuery])
 
   const value = {
-    authUser, documents, loading, stats, expiringDocs, searchQuery, filteredDocuments,
-    setSearchQuery, addDocument, deleteDocument, updateDocument, toggleEmergency, logout, login, register, 
+    authUser,
+    documents,
+    loading,
+    stats,
+    expiringDocs,
+    searchQuery,
+    filteredDocuments,
+    planLimits,
+    setSearchQuery,
+    addDocument,
+    deleteDocument,
+    updateDocument,
+    toggleEmergency,
+    logout,
+    login,
+    register,
+    canShare,
+    checkFeature,
     isAuthenticated: !!authUser
   }
 
@@ -244,7 +305,9 @@ export const AppProvider = ({ children }) => {
 
 export const useApp = () => useContext(AppContext)
 
+// ----------------------------------------------------------------
 // Helpers
+// ----------------------------------------------------------------
 export const getDocStatus = (expiry) => {
   if (!expiry) return 'ok'
   const diff = (new Date(expiry) - new Date()) / (1000 * 60 * 60 * 24)
@@ -254,7 +317,7 @@ export const getDocStatus = (expiry) => {
 }
 
 export const formatExpiry = (date) => {
-  if (!date) return 'Pas d\'expiration'
+  if (!date) return "Pas d'expiration"
   const d = new Date(date)
   const diff = (d - new Date()) / (1000 * 60 * 60 * 24)
   const str = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
