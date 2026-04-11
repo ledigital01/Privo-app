@@ -61,23 +61,20 @@ export const AppProvider = ({ children }) => {
   }
 
   useEffect(() => {
-    const initSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session) {
-          const { userId } = await buildUserFromSession(session)
-          await fetchDocuments(userId)
-        }
-      } catch (err) {
-        console.error("Erreur initSession:", err)
-      } finally {
-        setProfileLoading(false)
+    let mounted = true
+
+    // SÉCURITÉ ABSOLUE : Force la fin du chargement après 8 secondes quoi qu'il arrive
+    const safetyTimeout = setTimeout(() => {
+      if (mounted) {
+        setProfileLoading(prev => {
+          if (prev) console.warn("SÉCURITÉ : Fin du chargement forcée par timeout global")
+          return false
+        })
       }
-    }
+    }, 8000)
 
-    initSession()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const handleAuth = async (session) => {
+      if (!mounted) return
       try {
         if (session) {
           const { userId } = await buildUserFromSession(session)
@@ -88,13 +85,30 @@ export const AppProvider = ({ children }) => {
           setPlanStatus(null)
         }
       } catch (err) {
-        console.error("Erreur onAuthStateChange:", err)
+        console.error("Erreur Auth Handler:", err)
       } finally {
-        setProfileLoading(false)
+        if (mounted) setProfileLoading(false)
       }
+    }
+
+    // Initial check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleAuth(session)
+    }).catch(err => {
+      console.error("Erreur getSession:", err)
+      if (mounted) setProfileLoading(false)
     })
 
-    return () => subscription.unsubscribe()
+    // Listen for changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      handleAuth(session)
+    })
+
+    return () => {
+      mounted = false
+      clearTimeout(safetyTimeout)
+      subscription.unsubscribe()
+    }
   }, [])
 
   // ----------------------------------------------------------------
