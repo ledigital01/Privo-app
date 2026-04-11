@@ -1920,7 +1920,14 @@ function AuthGuard({ children }) {
   const { isAuthenticated, profileLoading } = useApp()
   const [authPage, setAuthPage] = useState('login') // 'login' | 'register'
 
-  if (profileLoading) return <div style={{ height: '100dvh', background: 'var(--c-bg)' }} />
+  if (profileLoading) return (
+    <div style={{ height: '100dvh', background: 'var(--c-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ textAlign: 'center' }}>
+        <Shield size={48} color="var(--c-primary)" style={{ opacity: 0.2, marginBottom: 16 }} className="pulse-animation" />
+        <div style={{ color: 'var(--c-text-muted)', fontSize: '0.9rem' }}>Chargement de DigiSAFE...</div>
+      </div>
+    </div>
+  )
 
   if (!isAuthenticated) {
     return authPage === 'login'
