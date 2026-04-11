@@ -18,6 +18,38 @@ import BottomSheet from './components/BottomSheet'
 import { t } from './utils/i18n'
 import { supabase } from './utils/supabaseClient'
 import QuickShareModal from './components/Modals/QuickShareModal'
+import { Bell as NotificationsPageBell, ShieldAlert as ErrorShield } from 'lucide-react'
+
+// ----------------------------------------------------------------
+// ERROR BOUNDARY
+// ----------------------------------------------------------------
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error }
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("CRITICAL APP ERROR:", error, errorInfo)
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: 40, textAlign: 'center', height: '100dvh', background: 'var(--c-bg)', color: 'var(--c-text)' }}>
+          <ShieldAlert size={64} color="var(--c-danger)" style={{ marginBottom: 20 }} />
+          <h2 style={{ marginBottom: 10 }}>Oups ! Une erreur est survenue.</h2>
+          <pre style={{ background: '#eee', padding: 10, borderRadius: 8, fontSize: '0.7rem', overflow: 'auto', textAlign: 'left', marginBottom: 20 }}>
+            {this.state.error?.toString()}
+          </pre>
+          <button onClick={() => window.location.reload()} style={{ padding: '10px 20px', background: 'var(--c-primary)', color: 'white', border: 'none', borderRadius: 8 }}>Réessayer</button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 import SharePage from './pages/SharePage'
 import EmergencyPage from './pages/EmergencyPage'
 import HelpPage from './pages/HelpPage'
@@ -1947,22 +1979,24 @@ export default function App() {
   }, [])
 
   return (
-    <AppProvider>
-      <Router>
-        <Routes>
-          {/* Route publique de partage */}
-          <Route path="/s/:id" element={<SharePage />} />
-          
-          {/* Toutes les autres routes sont protégées */}
-          <Route path="/*" element={
-            <AuthGuard>
-              <AppLockScreen>
-                <AppContent />
-              </AppLockScreen>
-            </AuthGuard>
-          } />
-        </Routes>
-      </Router>
-    </AppProvider>
+    <ErrorBoundary>
+      <AppProvider>
+        <Router>
+          <Routes>
+            {/* Route publique de partage */}
+            <Route path="/s/:id" element={<SharePage />} />
+            
+            {/* Toutes les autres routes sont protégées */}
+            <Route path="/*" element={
+              <AuthGuard>
+                <AppLockScreen>
+                  <AppContent />
+                </AppLockScreen>
+              </AuthGuard>
+            } />
+          </Routes>
+        </Router>
+      </AppProvider>
+    </ErrorBoundary>
   )
 }
