@@ -1917,10 +1917,11 @@ function AppLockScreen({ children }) {
    AUTH GUARD — shows Login/Register if not authenticated
    ================================================================ */
 function AuthGuard({ children }) {
-  const { isAuthenticated, profileLoading } = useApp()
+  const { isAuthenticated, loading } = useApp()
   const [authPage, setAuthPage] = useState('login') // 'login' | 'register'
 
-  if (profileLoading) return <div style={{ height: '100dvh', background: 'var(--c-bg)' }} />
+  // On attend que la session soit vérifiée AVANT de décider de rediriger
+  if (loading) return <div style={{ height: '100dvh', background: 'var(--c-bg)' }} />
 
   if (!isAuthenticated) {
     return authPage === 'login'
