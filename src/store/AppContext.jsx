@@ -224,18 +224,42 @@ export const AppProvider = ({ children }) => {
     }
   }
 
-  const register = async (email, password, firstName, lastName) => {
+  const sendVerificationCode = async (email, password, firstName, lastName) => {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { first_name: firstName, last_name: lastName } }
+        options: {
+          data: { first_name: firstName, last_name: lastName }
+        }
       })
       if (error) throw error
       return { success: true, user: data.user }
     } catch (err) {
+      console.error("Erreur sendVerificationCode:", err)
       return { success: false, error: err.message }
     }
+  }
+
+  const verifyCode = async (email, token) => {
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: 'signup'
+      })
+      if (error) throw error
+      return { success: true, user: data.user }
+    } catch (err) {
+      console.error("Erreur verifyCode:", err)
+      return { success: false, error: err.message }
+    }
+  }
+
+  const register = async (firstName, email, password, lastName) => {
+    // Dans notre flux, le compte est déjà créé par sendVerificationCode
+    // Cette fonction ne sert qu'à mettre à jour l'état local si besoin
+    return { success: true }
   }
 
   const logout = async () => {
