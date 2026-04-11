@@ -3,7 +3,7 @@ import { Shield, Eye, EyeOff, Mail, Lock, User, ArrowRight, ChevronLeft, Check }
 import { useApp } from '../store/AppContext'
 
 export default function RegisterPage({ onGoLogin }) {
-  const { sendVerificationCode, verifyCode } = useApp()
+  const { sendVerificationCode, verifyCode, register } = useApp()
   const [form, setForm] = useState({ name: '', lastName: '', email: '', password: '', confirm: '' })
   const [show, setShow] = useState({ password: false, confirm: false })
   const [agreed, setAgreed] = useState(false)

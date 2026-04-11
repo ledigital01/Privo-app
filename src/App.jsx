@@ -1715,8 +1715,6 @@ function NotificationsPage({ onDocClick }) {
                 </div>
               )
             })}
-          </div>
-        )}
       </div>
     </div>
   )
@@ -1732,7 +1730,7 @@ function AppLockScreen({ children }) {
   const [authStage, setAuthStage] = useState(() => {
     if (!savedPin) return 'SETUP_PIN'
     if (saved2fa) return '2FA'
-    return 'PIN' // si PIN existe mais pas 2FA
+    return 'PIN'
   })
 
   // PIN state

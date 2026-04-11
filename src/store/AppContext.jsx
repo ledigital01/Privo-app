@@ -328,6 +328,8 @@ export const AppProvider = ({ children }) => {
     logout,
     login,
     register,
+    sendVerificationCode,
+    verifyCode,
     canShare,
     checkFeature,
     isAuthenticated: !!authUser
