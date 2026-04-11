@@ -1715,6 +1715,8 @@ function NotificationsPage({ onDocClick }) {
                 </div>
               )
             })}
+          </div>
+        )}
       </div>
     </div>
   )
