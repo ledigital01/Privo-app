@@ -6,7 +6,7 @@ const AppContext = createContext()
 
 export const AppProvider = ({ children }) => {
   const [authUser, setAuthUser] = useState(null)
-  const [documents, setDocuments] = useState([])\
+  const [documents, setDocuments] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [planStatus, setPlanStatus] = useState(null) // { doc_count, shares_this_month, plan, ... }
