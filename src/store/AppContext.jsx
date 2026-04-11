@@ -7,7 +7,7 @@ const AppContext = createContext()
 export const AppProvider = ({ children }) => {
   const [authUser, setAuthUser] = useState(null)
   const [documents, setDocuments] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [profileLoading, setProfileLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [planStatus, setPlanStatus] = useState(null) // { doc_count, shares_this_month, plan, ... }
 
@@ -62,37 +62,26 @@ export const AppProvider = ({ children }) => {
 
   useEffect(() => {
     const initSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session) {
-          const { userId } = await buildUserFromSession(session)
-          await fetchDocuments(userId)
-        }
-      } catch (err) {
-        console.error("Critical error in initSession:", err)
-      } finally {
-        setLoading(false)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        const { userId } = await buildUserFromSession(session)
+        await fetchDocuments(userId)
       }
+      setProfileLoading(false)
     }
 
     initSession()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      try {
-        if (session) {
-          const { userId } = await buildUserFromSession(session)
-          await fetchDocuments(userId)
-        } else {
-          setAuthUser(null)
-          setDocuments([])
-          setPlanStatus(null)
-        }
-      } catch (err) {
-        console.error("Critical error in auth state change:", err)
-      } finally {
-        // Au cas où une erreur survient pendant le changement
-        setLoading(false)
+      if (session) {
+        const { userId } = await buildUserFromSession(session)
+        await fetchDocuments(userId)
+      } else {
+        setAuthUser(null)
+        setDocuments([])
+        setPlanStatus(null)
       }
+      setProfileLoading(false)
     })
 
     return () => subscription.unsubscribe()
@@ -315,7 +304,7 @@ export const AppProvider = ({ children }) => {
   const value = {
     authUser,
     documents,
-    loading,
+    profileLoading,
     stats,
     expiringDocs,
     searchQuery,
