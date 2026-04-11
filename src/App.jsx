@@ -226,14 +226,6 @@ function IAScanModal({ isOpen, onClose }) {
       const { error: uploadError } = await supabase.storage.from('documents').upload(path, selectedFile)
       if (uploadError) throw new Error(`Erreur Upload: ${uploadError.message}`)
 
-      // RESTRICTION PLAN GRATUIT - PAS D'IA
-      if (authUser?.plan === 'free') {
-        console.log("[SCAN] Plan Gratuit: Manuel uniquement")
-        setFormData({ title: selectedFile.name.split('.')[0], category: 'Autre', expiresAt: '', issuer: '', description: '', tags: [] })
-        setStep('review')
-        return
-      }
-
       console.log("[SCAN] Appel IA (Llama)...")
       // Tentative d'appel à la fonction Edge
       const { data, error: functionError } = await supabase.functions.invoke('process_document', { 
@@ -354,17 +346,6 @@ function IAScanModal({ isOpen, onClose }) {
 
           {step === 'review' && (
             <div className="space-y-4">
-              {/* IA Badge / Banner restriction */}
-              {authUser?.plan === 'free' && (
-                <div style={{ background: '#FFF7ED', border: '1px solid #FFEDD5', borderRadius: 12, padding: '12px 16px', marginBottom: 24, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                   <Sparkles size={18} color="#EA580C" style={{ marginTop: 2, flexShrink: 0 }} />
-                   <div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#9A3412' }}>Saisie Manuelle (Gratuit)</div>
-                      <div style={{ fontSize: '0.75rem', color: '#C2410C', marginTop: 2 }}>L'analyse automatique par IA est réservée aux comptes **Pro**.</div>
-                   </div>
-                </div>
-              )}
-
               <div style={{ display: 'flex', gap: 14, alignItems: 'center', background: 'var(--c-primary-soft)', padding: 12, borderRadius: 'var(--r-md)', marginBottom: 10 }}>
                 <div style={{ width: 60, height: 60, borderRadius: 'var(--r-sm)', overflow: 'hidden', flexShrink: 0 }}>
                   {previewUrl && <img src={previewUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
@@ -1383,7 +1364,7 @@ function ProfilePage({ onSecurityClick, onSettingsClick }) {
 
 function AppContent() {
   const navigate = useNavigate()
-  const { documents, deleteDocument, canAddDoc, authUser } = useApp()
+  const { documents, deleteDocument } = useApp()
 
   const [modal, setModal] = useState(null)
   const [selectedDocId, setSelectedDocId] = useState(null)
@@ -1391,14 +1372,7 @@ function AppContent() {
   const selectedDoc = documents.find(d => d.id === selectedDocId)
 
   const handleDocClick = (doc) => { setSelectedDocId(doc.id); navigate('/detail') }
-  
-  const handleAddClick = () => {
-     if (!canAddDoc) {
-        setModal('LIMIT_REACHED')
-     } else {
-        setModal('SCAN')
-     }
-  }
+  const handleScanClick = () => { setTimeout(() => setModal('SCAN'), 200) }
 
   const handleDeleteRequest = () => setModal('DELETE')
   const handleDeleteConfirm = () => {
@@ -1414,7 +1388,7 @@ function AppContent() {
         <Routes>
           <Route path="/" element={
             <Dashboard 
-              onAddClick={handleAddClick} 
+              onAddClick={() => setModal('SCAN')} 
               onEmergencyClick={() => {
                 console.log("DEBUG: Triggering EMERGENCY modal");
                 setModal('EMERGENCY');
@@ -1428,7 +1402,7 @@ function AppContent() {
           <Route path="/subscription" element={<SubscriptionPage onBack={() => navigate(-1)} />} />
           <Route path="/help" element={<HelpPage />} />
         </Routes>
-        <BottomNav onAddClick={handleAddClick} />
+        <BottomNav onAddClick={() => setModal('SCAN')} />
         <button
           onClick={() => setModal('CHAT')}
           style={{
@@ -1453,41 +1427,7 @@ function AppContent() {
       <SettingsModal isOpen={modal === 'SETTINGS'} onClose={() => setModal(null)} />
       <AIChatModal isOpen={modal === 'CHAT'} onClose={() => setModal(null)} />
       <EmergencyPage isOpen={modal === 'EMERGENCY'} onClose={() => setModal(null)} />
-      <LimitReachedModal isOpen={modal === 'LIMIT_REACHED'} onClose={() => setModal(null)} />
     </>
-  )
-}
-
-/* ================================================================
-   MODAL — LIMIT REACHED (Plan Gratuit)
-   ================================================================ */
-function LimitReachedModal({ isOpen, onClose }) {
-  const navigate = useNavigate()
-  if (!isOpen) return null
-
-  return (
-    <BottomSheet isOpen={isOpen} onClose={onClose} height="auto">
-      <div style={{ padding: '10px 0 40px', textAlign: 'center' }}>
-        <div style={{ width: 80, height: 80, borderRadius: 28, background: '#FFF1F2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', color: 'var(--c-danger)' }}>
-          <ShieldAlert size={40} />
-        </div>
-        <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--c-text)', marginBottom: 12 }}>Limite atteinte</h2>
-        <p style={{ color: 'var(--c-text-muted)', fontSize: '0.95rem', lineHeight: 1.6, marginBottom: 32, padding: '0 20px' }}>
-          Vous avez atteint le maximum de **5 documents** pour le plan gratuit. Passez au plan **Pro** pour un stockage illimité.
-        </p>
-
-        <div className="space-y-3" style={{ padding: '0 20px' }}>
-          <button 
-            className="btn-primary" 
-            style={{ width: '100%', height: 56, background: 'var(--c-primary)', borderRadius: 16, fontSize: '1rem', fontWeight: 800 }}
-            onClick={() => { onClose(); navigate('/subscription'); }}
-          >
-            Découvrir le Plan Pro
-          </button>
-          <button className="btn-secondary" style={{ width: '100%', height: 50, border: 'none' }} onClick={onClose}>Plus tard</button>
-        </div>
-      </div>
-    </BottomSheet>
   )
 }
 
