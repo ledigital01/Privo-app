@@ -62,24 +62,36 @@ export const AppProvider = ({ children }) => {
 
   useEffect(() => {
     const initSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
-        const { userId } = await buildUserFromSession(session)
-        await fetchDocuments(userId)
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          const { userId } = await buildUserFromSession(session)
+          await fetchDocuments(userId)
+        }
+      } catch (err) {
+        console.error("Critical error in initSession:", err)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
 
     initSession()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session) {
-        const { userId } = await buildUserFromSession(session)
-        await fetchDocuments(userId)
-      } else {
-        setAuthUser(null)
-        setDocuments([])
-        setPlanStatus(null)
+      try {
+        if (session) {
+          const { userId } = await buildUserFromSession(session)
+          await fetchDocuments(userId)
+        } else {
+          setAuthUser(null)
+          setDocuments([])
+          setPlanStatus(null)
+        }
+      } catch (err) {
+        console.error("Critical error in auth state change:", err)
+      } finally {
+        // Au cas où une erreur survient pendant le changement
+        setLoading(false)
       }
     })
 
