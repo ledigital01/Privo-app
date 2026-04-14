@@ -272,22 +272,48 @@ function IAScanModal({ isOpen, onClose, initialFile = null }) {
       const { error: uploadError } = await supabase.storage.from('documents').upload(path, selectedFile)
       if (uploadError) throw new Error(`Erreur Upload: ${uploadError.message}`)
 
-      // IA DÉSACTIVÉE TEMPORAIREMENT - PASSAGE DIRECT À LA SAISIE MANUELLE
-      console.log("[IMPORT] Passage à la saisie manuelle...")
+      // ✅ APPEL À L'IA (Uniquement pour les membres Pro)
+      if (isPro) {
+        console.log("[SCAN] Analyse IA en cours...")
+        try {
+          const { data: analysis, error: aiError } = await supabase.functions.invoke('process_document', {
+            body: { path }
+          })
+
+          if (aiError) throw aiError
+
+          if (analysis) {
+             console.log("[SCAN] Résultat IA reçu:", analysis)
+             setFormData({
+               title: analysis.title || selectedFile.name.replace(/\.[^/.]+$/, ""),
+               category: analysis.category || 'Autre',
+               expiresAt: analysis.expires_at || '',
+               issuer: analysis.issuer || '',
+               description: analysis.summary || '',
+               tags: analysis.tags || []
+             })
+             setStep('review')
+             return // Succès IA
+          }
+        } catch (aiErr) {
+          console.warn("[SCAN] L'analyse IA a échoué, passage en mode manuel.", aiErr)
+        }
+      }
+
+      // 🔄 MODE MANUEL (Fallback ou utilisateur Gratuit)
       setFormData({
-        title: selectedFile.name.replace(/\.[^/.]+$/, ""), // Nom du fichier par défaut
+        title: selectedFile.name.replace(/\.[^/.]+$/, ""),
         category: 'Autre',
         expiresAt: '',
         issuer: '',
         description: '',
         tags: []
       })
-      
       setStep('review')
     } catch (error) {
       console.error("[SCAN] Erreur critique:", error)
-      alert(`Oups ! Quelque chose coince : ${error.message}`) // Feedback direct sur l'écran
-      setStep('review') // On passe en manuel en cas d'erreur pour ne pas bloquer l'utilisateur
+      alert(`Oups ! Quelque chose coince : ${error.message}`)
+      setStep('review')
     }
   }
 
