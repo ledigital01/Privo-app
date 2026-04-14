@@ -2,8 +2,11 @@ import React, { useState } from 'react'
 import {
   Shield, Check, ChevronRight, Star, Zap, Crown,
   Smartphone, CreditCard, Wallet, X, ArrowLeft,
-  Lock, CheckCircle, XCircle, ChevronLeft
+  Lock, CheckCircle, XCircle, ChevronLeft,
+  Files, Database, Share2
 } from 'lucide-react'
+import { useApp } from '../store/AppContext'
+import { PLANS as PLAN_DEFS } from '../utils/plans'
 
 /* ================================================================
    MODAL — PAYMENT METHOD SELECTION
@@ -233,8 +236,22 @@ const FAQS = [
 ]
 
 export default function SubscriptionPage({ onBack }) {
+  const { authUser, documents } = useApp()
   const [selectedPlan, setSelectedPlan] = useState(null)
   const [openFaq, setOpenFaq] = useState(null)
+
+  const currentPlanId = authUser?.plan || 'free'
+  const currentPlanDef = PLAN_DEFS[currentPlanId]
+  
+  // Stats usage (en attendant les stats backend complètes, on utilise les documents chargés)
+  const docCount = documents?.length || 0
+  const docLimit = currentPlanDef.maxDocuments
+  const docPercent = Math.min(100, (docCount / docLimit) * 100)
+
+  // Calcule la taille totale (simulation ou réel si disponible)
+  const storageLimit = currentPlanDef.maxStorageMb
+  const storageUsed = 12.5 // Simulation en Mo pour l'instant
+  const storagePercent = (storageUsed / storageLimit) * 100
 
   return (
     <>
@@ -250,29 +267,60 @@ export default function SubscriptionPage({ onBack }) {
 
         <div className="page-content" style={{ paddingTop: 8 }}>
 
-          {/* Hero */}
-          <div style={{
-            background: 'linear-gradient(145deg, var(--c-primary), #001e5c)',
-            borderRadius: 'var(--r-2xl)', padding: '28px 24px', marginBottom: 28,
-            color: 'white', position: 'relative', overflow: 'hidden'
+          {/* Usage Stats Section */}
+          <div className="section-header" style={{ marginBottom: 12 }}>
+            <h2>Statut de votre coffre-fort</h2>
+            <span className="badge primary" style={{ background: currentPlanId !== 'free' ? 'var(--c-primary)' : 'var(--c-surface-2)', color: currentPlanId !== 'free' ? 'white' : 'var(--c-text-muted)' }}>
+              Plan {currentPlanDef.label}
+            </span>
+          </div>
+
+          <div style={{ 
+            background: 'var(--c-surface)', padding: 20, borderRadius: 'var(--r-xl)', 
+            border: '1.5px solid var(--c-border)', marginBottom: 28,
+            boxShadow: 'var(--shadow-xs)'
           }}>
-            <div style={{
-              position: 'absolute', top: -40, right: -40,
-              width: 140, height: 140, borderRadius: '50%',
-              background: 'rgba(255,255,255,0.06)'
-            }} />
-            <div style={{
-              position: 'absolute', bottom: -20, left: -20,
-              width: 100, height: 100, borderRadius: '50%',
-              background: 'rgba(255,255,255,0.04)'
-            }} />
-            <Zap size={28} color="rgba(255,255,255,0.8)" style={{ marginBottom: 12 }} />
-            <h2 style={{ color: 'white', fontSize: '1.4rem', marginBottom: 8, position: 'relative', zIndex: 1 }}>
-              Passez à la vitesse supérieure
-            </h2>
-            <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.85rem', lineHeight: 1.5, position: 'relative', zIndex: 1 }}>
-              Débloquez la puissance complète de l'IA pour gérer vos documents en toute sécurité.
-            </p>
+            <div className="space-y-4">
+              {/* Documents Limit */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Files size={16} color="var(--c-primary)" />
+                    <span className="body-sm" style={{ fontWeight: 600 }}>Documents archivés</span>
+                  </div>
+                  <span className="label-xs">{docCount} / {docLimit === Infinity ? '∞' : docLimit}</span>
+                </div>
+                <div style={{ height: 6, background: 'var(--c-surface-2)', borderRadius: 3, overflow: 'hidden' }}>
+                  <div style={{ width: `${docPercent}%`, height: '100%', background: docPercent > 90 ? 'var(--c-danger)' : 'var(--c-primary)', borderRadius: 3, transition: 'width 0.5s' }} />
+                </div>
+              </div>
+
+              {/* Storage Limit */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Database size={16} color="var(--c-primary)" />
+                    <span className="body-sm" style={{ fontWeight: 600 }}>Espace de stockage</span>
+                  </div>
+                  <span className="label-xs">{storageUsed} Mo / {storageLimit / 1024} Go</span>
+                </div>
+                <div style={{ height: 6, background: 'var(--c-surface-2)', borderRadius: 3, overflow: 'hidden' }}>
+                  <div style={{ width: `${storagePercent}%`, height: '100%', background: 'var(--c-primary)', borderRadius: 3, transition: 'width 0.5s' }} />
+                </div>
+              </div>
+            </div>
+            
+            {docPercent >= 80 && currentPlanId === 'free' && (
+              <div style={{ 
+                marginTop: 20, padding: 12, background: 'var(--c-warn-soft)', 
+                borderRadius: 'var(--r-md)', display: 'flex', gap: 10, alignItems: 'center'
+              }}>
+                <Zap size={18} color="var(--c-warn)" />
+                <p className="body-xs" style={{ color: '#856404', fontWeight: 600 }}>
+                  Vous approchez de la limite gratuite. Passez au plan Pro pour ne pas être bloqué.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Plans */}
@@ -304,11 +352,11 @@ export default function SubscriptionPage({ onBack }) {
                   </div>
                 )}
 
-                {plan.current && (
+                {plan.id === currentPlanId && (
                   <div style={{
                     position: 'absolute', top: 14, right: 16,
                   }}>
-                    <span className="badge primary">Plan actuel</span>
+                    <span className="badge primary" style={{ background: 'white', color: 'var(--c-primary)' }}>Votre plan actuel</span>
                   </div>
                 )}
 
@@ -368,7 +416,7 @@ export default function SubscriptionPage({ onBack }) {
                 </div>
 
                 {/* CTA */}
-                {!plan.current && (
+                {plan.id !== currentPlanId && (
                   <button
                     onClick={() => setSelectedPlan(plan)}
                     style={{
@@ -382,16 +430,16 @@ export default function SubscriptionPage({ onBack }) {
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
                     }}
                   >
-                    Mettre à niveau <ChevronRight size={16} />
+                    {plan.price === '0 FCFA' ? 'Revenir au gratuit' : 'Mettre à niveau'} <ChevronRight size={16} />
                   </button>
                 )}
-                {plan.current && (
+                {plan.id === currentPlanId && (
                   <div style={{
                     textAlign: 'center', padding: '10px 0',
-                    fontFamily: 'Manrope', fontWeight: 600, fontSize: '0.85rem',
-                    color: 'var(--c-text-muted)'
+                    fontFamily: 'Manrope', fontWeight: 700, fontSize: '0.85rem',
+                    color: plan.recommended ? 'white' : 'var(--c-primary)',
                   }}>
-                    ✓ Plan actuel
+                    ✓ Actuellement actif
                   </div>
                 )}
               </div>
