@@ -100,8 +100,8 @@ function BottomNav({ onAddClick }) {
       <button className={`nav-item${isActive('/documents') ? ' active' : ''}`} onClick={() => navigate('/documents')}>
         <FolderOpen size={22} />{t('documents')}
       </button>
-      <button className="nav-fab" onClick={onAddClick}>
-        <div className="fab-inner"><Plus size={28} /></div>
+      <button className="nav-add-btn" onClick={onAddClick}>
+        <Plus size={28} />
       </button>
       <button className={`nav-item${isActive('/notifications') ? ' active' : ''}`} onClick={() => navigate('/notifications')}>
         <div style={{ position: 'relative' }}>
@@ -1442,8 +1442,8 @@ function AppContent() {
       setModal('PLAN_LIMIT')
       return
     }
-    // On ouvre d'abord le choix de la méthode
-    setModal('ADD_CHOICE')
+    // On ouvre d'abord le choix de la méthode avec un léger délai pour la fluidité
+    setTimeout(() => setModal('ADD_CHOICE'), 100)
   }
 
   // Fonction pour déclencher le scan IA (vérifie les droits)

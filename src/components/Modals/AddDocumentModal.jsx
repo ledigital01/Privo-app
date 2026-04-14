@@ -3,8 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Camera, FileText, UploadCloud, ChevronRight } from 'lucide-react'
 
 const AddDocumentModal = ({ isOpen, onClose, onScanResult, onImportClick, onManualClick }) => {
-  if (!isOpen) return null
-
   return (
     <AnimatePresence>
       {isOpen && (
