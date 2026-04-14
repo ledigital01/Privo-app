@@ -276,13 +276,14 @@ function IAScanModal({ isOpen, onClose, initialFile = null }) {
       if (isPro) {
         console.log("[SCAN] Analyse IA en cours...")
         try {
-          const { data: analysis, error: aiError } = await supabase.functions.invoke('process_document', {
-            body: { path }
+          const { data: response, error: aiError } = await supabase.functions.invoke('process_document', {
+            body: { filePath: path, userId: authUser.id }
           })
 
           if (aiError) throw aiError
 
-          if (analysis) {
+          if (response?.success && response?.result) {
+             const analysis = response.result
              console.log("[SCAN] Résultat IA reçu:", analysis)
              setFormData({
                title: analysis.title || selectedFile.name.replace(/\.[^/.]+$/, ""),
