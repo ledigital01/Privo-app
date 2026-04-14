@@ -524,10 +524,16 @@ function IAScanModal({ isOpen, onClose, initialFile = null }) {
                 </div>
 
                 {formData.category?.toLowerCase() === 'identité' && (
-                  <label className="btn-secondary w-full" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', marginTop: 10 }}>
-                    <Camera size={18} /> {t('scan_verso')}
-                    <input type="file" hidden accept="image/*" capture="environment" onChange={handleAddVerso} />
-                  </label>
+                  <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+                    <label className="btn-secondary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>
+                      <Camera size={16} /> Scanner verso
+                      <input type="file" hidden accept="image/*" capture="environment" onChange={handleAddVerso} />
+                    </label>
+                    <label className="btn-secondary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>
+                      <UploadCloud size={16} /> Importer verso
+                      <input type="file" hidden accept="image/*,application/pdf" onChange={handleAddVerso} />
+                    </label>
+                  </div>
                 )}
 
                 <button className="btn-primary w-full mt-2" onClick={handleFinalSave} disabled={isSaving}>
