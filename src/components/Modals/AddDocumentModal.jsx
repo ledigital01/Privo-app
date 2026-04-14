@@ -16,112 +16,107 @@ const AddDocumentModal = ({ isOpen, onClose, onScanResult, onImportClick, onManu
             style={{
               position: 'fixed',
               inset: 0,
-              background: 'rgba(0, 0, 0, 0.4)',
-              backdropFilter: 'blur(4px)',
+              background: 'rgba(0, 0, 0, 0.45)',
+              backdropFilter: 'blur(6px)',
               zIndex: 200
             }}
           />
           
           {/* Bottom Sheet Modal */}
           <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
+            initial={{ y: "100%", x: "-50%" }}
+            animate={{ y: 0, x: "-50%" }}
+            exit={{ y: "100%", x: "-50%" }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
             style={{
               position: 'fixed',
               bottom: 0,
               left: '50%',
-              transform: 'translateX(-50%)',
-              width: '100%',
-              maxWidth: '430px',
-              maxHeight: '90vh',
-              background: '#f7f9fb',
-              borderRadius: '2.5rem 2.5rem 0 0',
+              width: '94%',
+              maxWidth: '400px',
+              background: 'var(--c-surface)',
+              borderRadius: '2rem 2rem 0 0',
               zIndex: 201,
-              boxShadow: '0 -8px 32px rgba(0, 61, 155, 0.15)',
+              boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.2)',
               overflow: 'hidden',
-              paddingBottom: 'safe-area-inset-bottom'
+              paddingBottom: '20px'
             }}
           >
             {/* Header / Grabber */}
-            <div style={{ padding: '24px', textAlign: 'center', position: 'relative' }}>
-              <div style={{ width: '48px', height: '6px', background: '#eceef0', borderRadius: '999px', margin: '0 auto 24px' }} />
+            <div style={{ padding: '16px 20px 8px', textAlign: 'center', position: 'relative' }}>
+              <div style={{ width: '36px', height: '4px', background: 'var(--c-border)', borderRadius: '999px', margin: '0 auto 16px' }} />
               <button 
                 onClick={onClose}
                 style={{
                   position: 'absolute',
-                  right: '24px',
-                  top: '24px',
-                  padding: '8px',
-                  background: '#eceef0',
+                  right: '16px',
+                  top: '16px',
+                  padding: '6px',
+                  background: 'var(--c-surface-2)',
                   borderRadius: '50%',
-                  color: '#434654'
+                  color: 'var(--c-text-muted)'
                 }}
               >
-                <X size={20} />
+                <X size={18} />
               </button>
-              <h2 className="title-lg" style={{ color: '#191c1e' }}>
+              <h2 className="title-md" style={{ color: 'var(--c-text)', fontSize: '1.2rem' }}>
                 Ajouter un document
               </h2>
             </div>
 
-            <div style={{ padding: '0 32px 32px' }}>
-              <p style={{ color: '#434654', textAlign: 'center', marginBottom: '24px', fontSize: '0.9rem' }}>
-                Choisissez une méthode pour capturer ou importer vos documents importants.
+            <div style={{ padding: '0 20px 20px' }}>
+              <p style={{ color: 'var(--c-text-muted)', textAlign: 'center', marginBottom: '20px', fontSize: '0.8rem' }}>
+                Choisissez une méthode pour capturer vos fichiers.
               </p>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {/* Method Options */}
                 <button 
                   onClick={onScanResult}
                   className="action-row"
-                  style={{ background: 'white' }}
+                  style={{ padding: '12px 16px', minHeight: 'auto' }}
                 >
-                  <div className="icon-wrap lg primary">
-                    <Camera size={28} />
+                  <div className="icon-wrap md primary" style={{ width: 44, height: 44 }}>
+                    <Camera size={22} />
                   </div>
                   <div style={{ flex: 1, textAlign: 'left' }}>
-                    <h3 className="title-md">Scan Intelligent (IA)</h3>
-                    <p className="body-sm">Capturez une photo, l'IA s'occupe de tout.</p>
+                    <div className="title-sm" style={{ fontSize: '0.9rem' }}>Scan Intelligent (IA)</div>
+                    <div className="body-sm" style={{ fontSize: '0.7rem' }}>Capturez une photo.</div>
                   </div>
-                  <ChevronRight size={20} color="var(--c-border)" />
+                  <ChevronRight size={18} color="var(--c-border)" />
                 </button>
 
                 <button 
                   onClick={onImportClick}
                   className="action-row"
-                  style={{ background: 'white' }}
+                  style={{ padding: '12px 16px', minHeight: 'auto' }}
                 >
-                  <div className="icon-wrap lg primary">
-                    <UploadCloud size={28} />
+                  <div className="icon-wrap md primary" style={{ width: 44, height: 44 }}>
+                    <UploadCloud size={22} />
                   </div>
                   <div style={{ flex: 1, textAlign: 'left' }}>
-                    <h3 className="title-md">Importer un fichier</h3>
-                    <p className="body-sm">PDF, Images (JPEG, PNG) jusqu'à 10MB.</p>
+                    <div className="title-sm" style={{ fontSize: '0.9rem' }}>Importer un fichier</div>
+                    <div className="body-sm" style={{ fontSize: '0.7rem' }}>PDF ou Images.</div>
                   </div>
-                  <ChevronRight size={20} color="var(--c-border)" />
+                  <ChevronRight size={18} color="var(--c-border)" />
                 </button>
                 
                 <button 
                   onClick={onManualClick}
                   className="action-row"
-                  style={{ background: 'white' }}
+                  style={{ padding: '12px 16px', minHeight: 'auto' }}
                 >
-                  <div className="icon-wrap lg primary">
-                    <FileText size={28} />
+                  <div className="icon-wrap md primary" style={{ width: 44, height: 44 }}>
+                    <FileText size={22} />
                   </div>
                   <div style={{ flex: 1, textAlign: 'left' }}>
-                    <h3 className="title-md">Saisie Manuelle</h3>
-                    <p className="body-sm">Remplir les informations vous-même.</p>
+                    <div className="title-sm" style={{ fontSize: '0.9rem' }}>Saisie Manuelle</div>
+                    <div className="body-sm" style={{ fontSize: '0.7rem' }}>Remplir vous-même.</div>
                   </div>
-                  <ChevronRight size={20} color="var(--c-border)" />
+                  <ChevronRight size={18} color="var(--c-border)" />
                 </button>
               </div>
             </div>
-
-            {/* Bottom Safe Area Padding */}
-            <div style={{ height: '40px' }} />
           </motion.div>
         </>
       )}
