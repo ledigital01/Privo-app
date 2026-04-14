@@ -7,6 +7,7 @@ const AppContext = createContext()
 export const AppProvider = ({ children }) => {
   const [authUser, setAuthUser] = useState(null)
   const [documents, setDocuments] = useState([])
+  const [storageUsedBytes, setStorageUsedBytes] = useState(0)
   const [profileLoading, setProfileLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [planStatus, setPlanStatus] = useState(null) // { doc_count, shares_this_month, plan, ... }
@@ -78,7 +79,10 @@ export const AppProvider = ({ children }) => {
       try {
         if (session) {
           const { userId } = await buildUserFromSession(session)
-          await fetchDocuments(userId)
+          await Promise.all([
+            fetchDocuments(userId),
+            fetchStorageSize(userId)
+          ])
         } else {
           setAuthUser(null)
           setDocuments([])
@@ -134,6 +138,18 @@ export const AppProvider = ({ children }) => {
         createdAt: d.created_at
       }))
       setDocuments(docs)
+    }
+  }
+
+  const fetchStorageSize = async (userId) => {
+    try {
+      const { data, error } = await supabase.storage.from('documents').list(userId)
+      if (!error && data) {
+        const total = data.reduce((acc, file) => acc + (file.metadata?.size || 0), 0)
+        setStorageUsedBytes(total)
+      }
+    } catch (err) {
+      console.warn("Erreur fetch storage size:", err)
     }
   }
 
@@ -352,8 +368,9 @@ export const AppProvider = ({ children }) => {
       docsPercent: planLimits.maxDocuments === Infinity ? 0 : Math.round((documents.length / planLimits.maxDocuments) * 100),
       sharesUsed: authUser?.sharesThisMonth || 0,
       sharesMax: planLimits.maxSharesPerMonth,
+      storageUsedMb: storageUsedBytes / (1024 * 1024)
     }
-  }, [documents, authUser, planLimits])
+  }, [documents, authUser, planLimits, storageUsedBytes])
 
   const expiringDocs = useMemo(() => {
     const soon = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)

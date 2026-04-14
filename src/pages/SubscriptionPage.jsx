@@ -248,7 +248,7 @@ const FAQS = [
 ]
 
 export default function SubscriptionPage({ onBack }) {
-  const { authUser, documents } = useApp()
+  const { authUser, documents, stats } = useApp()
   const [selectedPlan, setSelectedPlan] = useState(null)
   const [openFaq, setOpenFaq] = useState(null)
 
@@ -261,8 +261,8 @@ export default function SubscriptionPage({ onBack }) {
   const docPercent = Math.min(100, (docCount / docLimit) * 100)
 
   const storageLimit = currentPlanDef.maxStorageMb
-  const storageUsed = 12.5 // Simulation en Mo pour l'instant
-  const storagePercent = (storageUsed / storageLimit) * 100
+  const storageUsed = stats?.storageUsedMb || 0 // Valeur réelle calculée depuis le cloud
+  const storagePercent = Math.min(100, (storageUsed / storageLimit) * 100)
 
   // Fonction pour déterminer la couleur de progression
   const getProgressColor = (percent) => {
@@ -321,7 +321,7 @@ export default function SubscriptionPage({ onBack }) {
                     <span className="body-sm" style={{ fontWeight: 600 }}>Espace de stockage</span>
                   </div>
                   <span className="label-xs">
-                    {storageUsed} Mo / {storageLimit >= 1024 ? (storageLimit / 1024).toFixed(0) + ' Go' : storageLimit + ' Mo'}
+                    {storageUsed.toFixed(2)} Mo / {storageLimit >= 1024 ? (storageLimit / 1024).toFixed(0) + ' Go' : storageLimit + ' Mo'}
                   </span>
                 </div>
                 <div style={{ height: 6, background: 'var(--c-surface-2)', borderRadius: 3, overflow: 'hidden' }}>
