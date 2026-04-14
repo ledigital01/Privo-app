@@ -261,45 +261,26 @@ function IAScanModal({ isOpen, onClose, initialFile = null }) {
     setStep('processing')
 
     try {
-    const path = `${authUser.id}/scan_${Date.now()}.${selectedFile.name.split('.').pop()}`
-    setFilePath(path)
-    console.log("[SCAN] Upload vers Storage...", path)
-    const { error: uploadError } = await supabase.storage.from('documents').upload(path, selectedFile)
-    if (uploadError) throw new Error(`Erreur Upload: ${uploadError.message}`)
+      const extension = selectedFile.name.split('.').pop()
+      const path = `${authUser.id}/import_${Date.now()}.${extension}`
+      setFilePath(path)
+      
+      console.log("[IMPORT] Upload vers Storage...", path)
+      const { error: uploadError } = await supabase.storage.from('documents').upload(path, selectedFile)
+      if (uploadError) throw new Error(`Erreur Upload: ${uploadError.message}`)
 
-    // Si pas Pro, on saute l'IA et on va direct à la revue manuelle
-    if (!isPro) {
-      setFormData(prev => ({ ...prev, title: selectedFile.name.replace(/\.[^/.]+$/, "") }))
-      setStep('review')
-      return
-    }
-
-      console.log("[SCAN] Appel IA (Llama)...")
-      // Tentative d'appel à la fonction Edge
-      const { data, error: functionError } = await supabase.functions.invoke('process_document', { 
-        body: { filePath: path, userId: authUser.id } 
+      // IA DÉSACTIVÉE TEMPORAIREMENT - PASSAGE DIRECT À LA SAISIE MANUELLE
+      console.log("[IMPORT] Passage à la saisie manuelle...")
+      setFormData({
+        title: selectedFile.name.replace(/\.[^/.]+$/, ""), // Nom du fichier par défaut
+        category: 'Autre',
+        expiresAt: '',
+        issuer: '',
+        description: '',
+        tags: []
       })
-
-      if (functionError) {
-        console.error("[SCAN] Erreur Supabase Function:", functionError)
-        throw new Error(`Erreur IA : ${functionError.message || 'La fonction ne répond pas'}`)
-      }
-
-      if (data && data.result) {
-        console.log("[SCAN] Résultat IA reçu:", data.result)
-        const res = data.result
-        setFormData({
-          title: res.title || 'Nouveau Document',
-          category: CATEGORY_MAP[res.category?.toLowerCase()] || res.category || 'Autre',
-          expiresAt: normalizeDate(res.expiresAt) || res.expiresAt || '',
-          issuer: res.issuer || '',
-          description: res.description || '',
-          tags: res.tags || []
-        })
-        setStep('review')
-      } else {
-        throw new Error("L'IA n'a pas pu extraire de données.")
-      }
+      
+      setStep('review')
     } catch (error) {
       console.error("[SCAN] Erreur critique:", error)
       alert(`Oups ! Quelque chose coince : ${error.message}`) // Feedback direct sur l'écran
@@ -1538,11 +1519,8 @@ function AppContent() {
          onScanRequest={startIAScan}
          onFileSelect={handleFileSelect}
       />
-      <IAScanModal 
-         isOpen={modal === 'SCAN'} 
-         onClose={() => { setModal(null); setPendingFile(null); }} 
-         initialFile={pendingFile} 
-      />
+      <ManualAddModal isOpen={modal === 'MANUAL'} onClose={() => setModal(null)} />
+      <IAScanModal isOpen={modal === 'SCAN'} onClose={() => { setModal(null); setPendingFile(null); }} initialFile={pendingFile} />
       <DeleteModal isOpen={modal === 'DELETE'} onClose={() => setModal(null)} onConfirm={handleDeleteConfirm} doc={selectedDoc} />
       <QuickShareModal isOpen={modal === 'SHARE'} onClose={() => setModal(null)} doc={selectedDoc} />
       <SecuritySettingsModal isOpen={modal === 'SECURITY'} onClose={() => setModal(null)} />
