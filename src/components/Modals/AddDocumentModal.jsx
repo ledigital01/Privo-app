@@ -13,7 +13,13 @@ const AddDocumentModal = ({ isOpen, onClose, onScanResult, onImportClick, onManu
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100]"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0, 0, 0, 0.4)',
+              backdropFilter: 'blur(4px)',
+              zIndex: 200
+            }}
           />
           
           {/* Bottom Sheet Modal */}
@@ -22,76 +28,100 @@ const AddDocumentModal = ({ isOpen, onClose, onScanResult, onImportClick, onManu
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="fixed bottom-0 left-0 right-0 max-h-[90vh] bg-[#f7f9fb] rounded-t-[2.5rem] z-[101] shadow-2xl overflow-hidden"
+            style={{
+              position: 'fixed',
+              bottom: 0,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '100%',
+              maxWidth: '430px',
+              maxHeight: '90vh',
+              background: '#f7f9fb',
+              borderRadius: '2.5rem 2.5rem 0 0',
+              zIndex: 201,
+              boxShadow: '0 -8px 32px rgba(0, 61, 155, 0.15)',
+              overflow: 'hidden',
+              paddingBottom: 'safe-area-inset-bottom'
+            }}
           >
             {/* Header / Grabber */}
-            <div className="p-6 pb-2 text-center relative">
-              <div className="w-12 h-1.5 bg-[#eceef0] rounded-full mx-auto mb-6" />
+            <div style={{ padding: '24px', textAlign: 'center', position: 'relative' }}>
+              <div style={{ width: '48px', height: '6px', background: '#eceef0', borderRadius: '999px', margin: '0 auto 24px' }} />
               <button 
                 onClick={onClose}
-                className="absolute right-6 top-6 p-2 bg-[#eceef0] rounded-full text-[#434654]"
+                style={{
+                  position: 'absolute',
+                  right: '24px',
+                  top: '24px',
+                  padding: '8px',
+                  background: '#eceef0',
+                  borderRadius: '50%',
+                  color: '#434654'
+                }}
               >
                 <X size={20} />
               </button>
-              <h2 className="font-headline text-2xl font-extrabold text-[#191c1e]">
+              <h2 className="title-lg" style={{ color: '#191c1e' }}>
                 Ajouter un document
               </h2>
             </div>
 
-            <div className="p-8 space-y-4">
-              <p className="text-[#434654] text-center mb-6">
+            <div style={{ padding: '0 32px 32px' }}>
+              <p style={{ color: '#434654', textAlign: 'center', marginBottom: '24px', fontSize: '0.9rem' }}>
                 Choisissez une méthode pour capturer ou importer vos documents importants.
               </p>
 
-              <div className="grid grid-cols-1 gap-4">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {/* Method Options */}
                 <button 
                   onClick={onScanResult}
-                  className="flex items-center gap-4 p-5 bg-white rounded-2xl border border-transparent hover:border-[#003d9b]/20 active:scale-95 transition-all group"
+                  className="action-row"
+                  style={{ background: 'white' }}
                 >
-                  <div className="w-14 h-14 bg-[#dae2ff] flex-center rounded-xl text-[#003d9b] group-hover:bg-[#003d9b] group-hover:text-white transition-colors">
+                  <div className="icon-wrap lg primary">
                     <Camera size={28} />
                   </div>
-                  <div className="flex-1 text-left">
-                    <h3 className="font-headline font-bold text-lg">Scan Intelligent (IA)</h3>
-                    <p className="text-sm text-[#434654]">Capturez une photo, l'IA s'occupe de tout.</p>
+                  <div style={{ flex: 1, textAlign: 'left' }}>
+                    <h3 className="title-md">Scan Intelligent (IA)</h3>
+                    <p className="body-sm">Capturez une photo, l'IA s'occupe de tout.</p>
                   </div>
-                  <ChevronRight size={20} className="text-[#eceef0] group-hover:text-[#003d9b] transition-colors" />
+                  <ChevronRight size={20} color="var(--c-border)" />
                 </button>
 
                 <button 
                   onClick={onImportClick}
-                  className="flex items-center gap-4 p-5 bg-white rounded-2xl border border-transparent hover:border-[#003d9b]/20 active:scale-95 transition-all group"
+                  className="action-row"
+                  style={{ background: 'white' }}
                 >
-                  <div className="w-14 h-14 bg-[#dae2ff] flex-center rounded-xl text-[#003d9b] group-hover:bg-[#003d9b] group-hover:text-white transition-colors">
+                  <div className="icon-wrap lg primary">
                     <UploadCloud size={28} />
                   </div>
-                  <div className="flex-1 text-left">
-                    <h3 className="font-headline font-bold text-lg">Importer un fichier</h3>
-                    <p className="text-sm text-[#434654]">PDF, Images (JPEG, PNG) jusqu'à 10MB.</p>
+                  <div style={{ flex: 1, textAlign: 'left' }}>
+                    <h3 className="title-md">Importer un fichier</h3>
+                    <p className="body-sm">PDF, Images (JPEG, PNG) jusqu'à 10MB.</p>
                   </div>
-                  <ChevronRight size={20} className="text-[#eceef0] group-hover:text-[#003d9b] transition-colors" />
+                  <ChevronRight size={20} color="var(--c-border)" />
                 </button>
                 
                 <button 
                   onClick={onManualClick}
-                  className="flex items-center gap-4 p-5 bg-white rounded-2xl border border-transparent hover:border-[#003d9b]/20 active:scale-95 transition-all group"
+                  className="action-row"
+                  style={{ background: 'white' }}
                 >
-                  <div className="w-14 h-14 bg-[#dae2ff] flex-center rounded-xl text-[#003d9b] group-hover:bg-[#003d9b] group-hover:text-white transition-colors">
+                  <div className="icon-wrap lg primary">
                     <FileText size={28} />
                   </div>
-                  <div className="flex-1 text-left">
-                    <h3 className="font-headline font-bold text-lg">Saisie Manuelle</h3>
-                    <p className="text-sm text-[#434654]">Remplir les informations vous-même.</p>
+                  <div style={{ flex: 1, textAlign: 'left' }}>
+                    <h3 className="title-md">Saisie Manuelle</h3>
+                    <p className="body-sm">Remplir les informations vous-même.</p>
                   </div>
-                  <ChevronRight size={20} className="text-[#eceef0] group-hover:text-[#003d9b] transition-colors" />
+                  <ChevronRight size={20} color="var(--c-border)" />
                 </button>
               </div>
-
             </div>
 
             {/* Bottom Safe Area Padding */}
-            <div className="h-12" />
+            <div style={{ height: '40px' }} />
           </motion.div>
         </>
       )}
