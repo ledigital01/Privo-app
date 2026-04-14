@@ -1538,8 +1538,11 @@ function AppContent() {
          onScanRequest={startIAScan}
          onFileSelect={handleFileSelect}
       />
-      <ManualAddModal isOpen={modal === 'MANUAL'} onClose={() => setModal(null)} />
-      <IAScanModal isOpen={modal === 'SCAN'} onClose={() => { setModal(null); setPendingFile(null); }} initialFile={pendingFile} />
+      <IAScanModal 
+         isOpen={modal === 'SCAN'} 
+         onClose={() => { setModal(null); setPendingFile(null); }} 
+         initialFile={pendingFile} 
+      />
       <DeleteModal isOpen={modal === 'DELETE'} onClose={() => setModal(null)} onConfirm={handleDeleteConfirm} doc={selectedDoc} />
       <QuickShareModal isOpen={modal === 'SHARE'} onClose={() => setModal(null)} doc={selectedDoc} />
       <SecuritySettingsModal isOpen={modal === 'SECURITY'} onClose={() => setModal(null)} />

@@ -10,7 +10,6 @@ const AddDocumentModal = ({ isOpen, onClose, onFileSelect, onScanRequest }) => {
     const file = e.target.files[0]
     if (file) {
       onFileSelect(file)
-      onClose()
     }
   }
 
