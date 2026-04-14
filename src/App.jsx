@@ -1373,7 +1373,7 @@ function ProfilePage({ onSecurityClick, onSettingsClick }) {
   }
 
   const MENU = [
-    { icon: <CreditCard size={20} />, label: t('subscription'), desc: `${t('current_plan')} : ${user.plan === 'free' ? t('free') : user.plan === 'pro' ? 'Pro' : 'Business'}`, path: '/subscription', action: null, color: 'primary' },
+    { icon: <CreditCard size={20} />, label: 'Mon Plan & Stockage', desc: user.plan === 'free' ? 'Plan Gratuit (Limite 5 docs)' : 'Plan ' + user.plan.toUpperCase() + ' actif', path: '/subscription', action: null, color: 'primary' },
     { icon: <Shield size={20} />, label: t('security'), desc: 'PIN & Authenticator', path: null, action: onSecurityClick, color: 'success' },
     { icon: <Settings size={20} />, label: t('settings'), desc: 'Lang/Notifications', path: null, action: onSettingsClick, color: 'neutral' },
     { icon: <HelpCircle size={20} />, label: t('help'), desc: "FAQ/Contact", path: '/help', action: null, color: 'neutral' },

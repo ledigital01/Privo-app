@@ -45,11 +45,23 @@ const Dashboard = ({ onAddClick, onEmergencyClick }) => {
       </div>
 
       {/* Hero Welcome */}
-      <section className="mt-8">
-        <h1 className="font-headline text-4xl font-extrabold text-[#191c1e] leading-tight">
-          Bonjour, <span className="text-[#0052cc]">Sébastien</span> 🛡️
-        </h1>
-        <p className="text-[#434654] font-body mt-2">Votre sanctuaire est parfaitement sécurisé.</p>
+      <section className="mt-8 flex justify-between items-end">
+        <div>
+          <h1 className="font-headline text-4xl font-extrabold text-[#191c1e] leading-tight">
+            Bonjour, <span className="text-[#0052cc]">Sébastien</span> 🛡️
+          </h1>
+          <p className="text-[#434654] font-body mt-2">Votre sanctuaire est parfaitement sécurisé.</p>
+        </div>
+        <button 
+          onClick={() => window.location.hash = '/subscription'} 
+          className="badge primary-soft" 
+          style={{ padding: '8px 16px', borderRadius: 12, cursor: 'pointer', border: 'none' }}
+        >
+          <div style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', opacity: 0.6 }}>Votre Plan</div>
+          <div style={{ color: 'var(--c-primary)', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 4 }}>
+            Pro <Zap size={14} fill="var(--c-primary)" />
+          </div>
+        </button>
       </section>
 
       {/* Summary Cards */}
