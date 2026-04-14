@@ -288,9 +288,9 @@ function IAScanModal({ isOpen, onClose, initialFile = null }) {
              setFormData({
                title: analysis.title || selectedFile.name.replace(/\.[^/.]+$/, ""),
                category: analysis.category || 'Autre',
-               expiresAt: analysis.expires_at || '',
+               expiresAt: analysis.expiresAt || '',
                issuer: analysis.issuer || '',
-               description: analysis.summary || '',
+               description: analysis.description || '',
                tags: analysis.tags || []
              })
              setStep('review')
