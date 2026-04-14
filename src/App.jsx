@@ -349,9 +349,9 @@ function IAScanModal({ isOpen, onClose, initialFile = null }) {
                   <div className="icon-wrap md neutral"><UploadCloud size={24} /></div>
                   <div style={{ flex: 1 }}>
                     <div className="action-text">{t('scan_file')}</div>
-                    <div className="action-desc">{t('scan_file_desc')}</div>
+                    <div className="action-desc">Tous types de fichiers (Docs, Zip, Vidéos...)</div>
                   </div>
-                  <input type="file" hidden accept="image/*,application/pdf" onChange={handleFileChange} />
+                  <input type="file" hidden onChange={handleFileChange} />
                 </label>
               </div>
             </div>
@@ -359,8 +359,12 @@ function IAScanModal({ isOpen, onClose, initialFile = null }) {
 
           {step === 'processing' && (
             <div style={{ textAlign: 'center', padding: '10px 0' }}>
-              <div style={{ position: 'relative', width: '100%', height: 280, background: '#000', borderRadius: 'var(--r-xl)', overflow: 'hidden', marginBottom: 20 }}>
-                {previewUrl && <img src={previewUrl} style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: 0.6 }} />}
+              <div style={{ position: 'relative', width: '100%', height: 280, background: '#000', borderRadius: 'var(--r-xl)', overflow: 'hidden', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {previewUrl && file?.type.startsWith('image/') ? (
+                  <img src={previewUrl} style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: 0.6 }} />
+                ) : (
+                  <FileText size={80} color="rgba(255,255,255,0.3)" />
+                )}
                 <div className="scan-line-active" />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -376,8 +380,12 @@ function IAScanModal({ isOpen, onClose, initialFile = null }) {
           {step === 'review' && (
             <div className="space-y-4">
               <div style={{ display: 'flex', gap: 14, alignItems: 'center', background: 'var(--c-primary-soft)', padding: 12, borderRadius: 'var(--r-md)', marginBottom: 10 }}>
-                <div style={{ width: 60, height: 60, borderRadius: 'var(--r-sm)', overflow: 'hidden', flexShrink: 0 }}>
-                  {previewUrl && <img src={previewUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                <div style={{ width: 60, height: 60, borderRadius: 'var(--r-sm)', overflow: 'hidden', flexShrink: 0, background: 'var(--c-surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {previewUrl && file?.type.startsWith('image/') ? (
+                    <img src={previewUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <FileText size={32} color="var(--c-text-muted)" />
+                  )}
                 </div>
                 <div>
                   <div className="label-xs" style={{ color: 'var(--c-primary)' }}>{t('scan_detected')}</div>

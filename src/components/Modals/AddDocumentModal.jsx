@@ -93,7 +93,6 @@ const AddDocumentModal = ({ isOpen, onClose, onFileSelect, onScanRequest }) => {
                   type="file" 
                   ref={fileInputRef} 
                   hidden 
-                  accept="image/*,application/pdf" 
                   onChange={handleFileChange} 
                 />
 
