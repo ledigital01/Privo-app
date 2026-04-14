@@ -239,7 +239,7 @@ function IAScanModal({ isOpen, onClose, initialFile = null }) {
   const [tempTag, setTempTag] = useState('')
   const [isLargeFile, setIsLargeFile] = useState(false)
 
-  const isPro = checkFeature('aiScan')
+  const isPro = authUser?.plan === 'pro' || authUser?.plan === 'business'
 
   useEffect(() => {
     if (initialFile && isOpen) {
@@ -408,9 +408,11 @@ function IAScanModal({ isOpen, onClose, initialFile = null }) {
                   }} />
                 </div>
                 <p className="body-sm" style={{ opacity: 0.7, padding: '0 20px' }}>
-                  {isLargeFile 
-                    ? "Ce fichier est volumineux. Votre DigiSAFE sécurise le transfert, merci de patienter quelques instants sans fermer l'écran..." 
-                    : t('scan_ai_sub')}
+                  {isPro 
+                    ? "DigiSAFE analyse votre document avec l'IA avancée pour remplir vos informations..." 
+                    : isLargeFile 
+                      ? "Ce fichier est volumineux. Votre DigiSAFE sécurise le transfert, merci de patienter quelques instants sans fermer l'écran..." 
+                      : t('scan_ai_sub')}
                 </p>
               </div>
             </div>
