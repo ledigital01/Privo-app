@@ -228,8 +228,8 @@ function EditDocumentModal({ isOpen, onClose, doc }) {
 /* ================================================================
    MODAL — IA SCAN SUPRÊME (Version 2.0 : Robuste & Premium)
    ================================================================ */
-function IAScanModal({ isOpen, onClose }) {
-  const { authUser, addDocument } = useApp()
+function IAScanModal({ isOpen, onClose, initialFile = null }) {
+  const { authUser, addDocument, checkFeature } = useApp()
   const [step, setStep] = useState('upload') // 'upload' | 'processing' | 'review' | 'done'
   const [file, setFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
@@ -237,6 +237,14 @@ function IAScanModal({ isOpen, onClose }) {
   const [formData, setFormData] = useState({ title: '', category: 'Autre', expiresAt: '', issuer: '', description: '', tags: [] })
   const [isSaving, setIsSaving] = useState(false)
   const [tempTag, setTempTag] = useState('')
+
+  const isPro = checkFeature('aiScan')
+
+  useEffect(() => {
+    if (initialFile && isOpen) {
+      handleFileChange({ target: { files: [initialFile] } })
+    }
+  }, [initialFile, isOpen])
 
   const reset = () => {
     setStep('upload'); setFile(null); setPreviewUrl(null); setFilePath(null); setIsSaving(false)
@@ -253,12 +261,18 @@ function IAScanModal({ isOpen, onClose }) {
     setStep('processing')
 
     try {
-      // UNIQUE UPLOAD START
-      const path = `${authUser.id}/ai_scan_${Date.now()}.${selectedFile.name.split('.').pop()}`
-      setFilePath(path)
-      console.log("[SCAN] Upload vers Storage...", path)
-      const { error: uploadError } = await supabase.storage.from('documents').upload(path, selectedFile)
-      if (uploadError) throw new Error(`Erreur Upload: ${uploadError.message}`)
+    const path = `${authUser.id}/scan_${Date.now()}.${selectedFile.name.split('.').pop()}`
+    setFilePath(path)
+    console.log("[SCAN] Upload vers Storage...", path)
+    const { error: uploadError } = await supabase.storage.from('documents').upload(path, selectedFile)
+    if (uploadError) throw new Error(`Erreur Upload: ${uploadError.message}`)
+
+    // Si pas Pro, on saute l'IA et on va direct à la revue manuelle
+    if (!isPro) {
+      setFormData(prev => ({ ...prev, title: selectedFile.name.replace(/\.[^/.]+$/, "") }))
+      setStep('review')
+      return
+    }
 
       console.log("[SCAN] Appel IA (Llama)...")
       // Tentative d'appel à la fonction Edge
@@ -1429,6 +1443,7 @@ function AppContent() {
   const [modal, setModal] = useState(null)
   const [planLimitMsg, setPlanLimitMsg] = useState(null)
   const [selectedDocId, setSelectedDocId] = useState(null)
+  const [pendingFile, setPendingFile] = useState(null)
   
   const selectedDoc = documents.find(d => d.id === selectedDocId)
 
@@ -1443,16 +1458,20 @@ function AppContent() {
       return
     }
     // On ouvre d'abord le choix de la méthode avec un léger délai pour la fluidité
-    setTimeout(() => setModal('ADD_CHOICE'), 100)
+    setModal('ADD_CHOICE')
   }
 
   // Fonction pour déclencher le scan IA (vérifie les droits)
   const startIAScan = () => {
     if (!checkFeature('aiScan')) {
-      setPlanLimitMsg("Le Scan Intelligent IA est réservé aux membres Pro. Utilisez la saisie manuelle ou passez au plan supérieur.")
-      setModal('PLAN_LIMIT')
+      handleUpgradeRequest("Le Scan Intelligent IA est réservé aux membres Pro.")
       return
     }
+    setModal('SCAN')
+  }
+
+  const handleFileSelect = (file) => {
+    setPendingFile(file)
     setModal('SCAN')
   }
 
@@ -1516,12 +1535,11 @@ function AppContent() {
       <AddDocumentModal 
          isOpen={modal === 'ADD_CHOICE'} 
          onClose={() => setModal(null)} 
-         onScanResult={startIAScan} 
-         onManualClick={() => setModal('MANUAL')}
-         onImportClick={() => setModal('MANUAL')} 
+         onScanRequest={startIAScan}
+         onFileSelect={handleFileSelect}
       />
       <ManualAddModal isOpen={modal === 'MANUAL'} onClose={() => setModal(null)} />
-      <IAScanModal isOpen={modal === 'SCAN'} onClose={() => setModal(null)} />
+      <IAScanModal isOpen={modal === 'SCAN'} onClose={() => { setModal(null); setPendingFile(null); }} initialFile={pendingFile} />
       <DeleteModal isOpen={modal === 'DELETE'} onClose={() => setModal(null)} onConfirm={handleDeleteConfirm} doc={selectedDoc} />
       <QuickShareModal isOpen={modal === 'SHARE'} onClose={() => setModal(null)} doc={selectedDoc} />
       <SecuritySettingsModal isOpen={modal === 'SECURITY'} onClose={() => setModal(null)} />

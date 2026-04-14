@@ -1,8 +1,19 @@
-import React from 'react'
+import React, { useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Camera, FileText, UploadCloud, ChevronRight } from 'lucide-react'
 
-const AddDocumentModal = ({ isOpen, onClose, onScanResult, onImportClick, onManualClick }) => {
+const AddDocumentModal = ({ isOpen, onClose, onFileSelect, onScanRequest }) => {
+  const fileInputRef = useRef(null)
+  const cameraInputRef = useRef(null)
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      onFileSelect(file)
+      onClose()
+    }
+  }
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -70,11 +81,28 @@ const AddDocumentModal = ({ isOpen, onClose, onScanResult, onImportClick, onManu
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {/* Method Options */}
+                {/* Inputs cachés */}
+                <input 
+                  type="file" 
+                  ref={cameraInputRef} 
+                  hidden 
+                  accept="image/*" 
+                  capture="environment" 
+                  onChange={handleFileChange} 
+                />
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  hidden 
+                  accept="image/*,application/pdf" 
+                  onChange={handleFileChange} 
+                />
+
+                {/* Scan Intelligent (IA) */}
                 <button 
-                  onClick={onScanResult}
+                  onClick={onScanRequest}
                   className="action-row"
-                  style={{ padding: '12px 16px', minHeight: 'auto' }}
+                  style={{ padding: '12px 16px', minHeight: 'auto', background: 'white' }}
                 >
                   <div className="icon-wrap md primary" style={{ width: 44, height: 44 }}>
                     <Camera size={22} />
@@ -86,10 +114,11 @@ const AddDocumentModal = ({ isOpen, onClose, onScanResult, onImportClick, onManu
                   <ChevronRight size={18} color="var(--c-border)" />
                 </button>
 
+                {/* Importer un fichier */}
                 <button 
-                  onClick={onImportClick}
+                  onClick={() => fileInputRef.current?.click()}
                   className="action-row"
-                  style={{ padding: '12px 16px', minHeight: 'auto' }}
+                  style={{ padding: '12px 16px', minHeight: 'auto', background: 'white' }}
                 >
                   <div className="icon-wrap md primary" style={{ width: 44, height: 44 }}>
                     <UploadCloud size={22} />
@@ -97,21 +126,6 @@ const AddDocumentModal = ({ isOpen, onClose, onScanResult, onImportClick, onManu
                   <div style={{ flex: 1, textAlign: 'left' }}>
                     <div className="title-sm" style={{ fontSize: '0.9rem' }}>Importer un fichier</div>
                     <div className="body-sm" style={{ fontSize: '0.7rem' }}>PDF ou Images.</div>
-                  </div>
-                  <ChevronRight size={18} color="var(--c-border)" />
-                </button>
-                
-                <button 
-                  onClick={onManualClick}
-                  className="action-row"
-                  style={{ padding: '12px 16px', minHeight: 'auto' }}
-                >
-                  <div className="icon-wrap md primary" style={{ width: 44, height: 44 }}>
-                    <FileText size={22} />
-                  </div>
-                  <div style={{ flex: 1, textAlign: 'left' }}>
-                    <div className="title-sm" style={{ fontSize: '0.9rem' }}>Saisie Manuelle</div>
-                    <div className="body-sm" style={{ fontSize: '0.7rem' }}>Remplir vous-même.</div>
                   </div>
                   <ChevronRight size={18} color="var(--c-border)" />
                 </button>
