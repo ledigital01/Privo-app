@@ -349,9 +349,9 @@ function IAScanModal({ isOpen, onClose, initialFile = null }) {
                   <div className="icon-wrap md neutral"><UploadCloud size={24} /></div>
                   <div style={{ flex: 1 }}>
                     <div className="action-text">{t('scan_file')}</div>
-                    <div className="action-desc">Tous types de fichiers (Docs, Zip, Vidéos...)</div>
+                    <div className="action-desc">Documents, Images, Archives (Zip)...</div>
                   </div>
-                  <input type="file" hidden onChange={handleFileChange} />
+                  <input type="file" hidden accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.7z" onChange={handleFileChange} />
                 </label>
               </div>
             </div>

@@ -93,6 +93,7 @@ const AddDocumentModal = ({ isOpen, onClose, onFileSelect, onScanRequest }) => {
                   type="file" 
                   ref={fileInputRef} 
                   hidden 
+                  accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.7z"
                   onChange={handleFileChange} 
                 />
 

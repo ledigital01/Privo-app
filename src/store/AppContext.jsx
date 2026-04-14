@@ -172,9 +172,7 @@ export const AppProvider = ({ children }) => {
         expires_at: docData.expiresAt || null,
         icon_name: docData.iconName || 'file',
         file_path: filePath,
-        description: docData.description || null,
-        issuer: docData.issuer || null,
-        tags: docData.tags || []
+        description: docData.description || null
       }
 
       const { data, error } = await supabase
@@ -198,8 +196,6 @@ export const AppProvider = ({ children }) => {
         iconName: data[0].icon_name || 'file',
         filePath: data[0].file_path,
         description: data[0].description || '',
-        issuer: data[0].issuer || '',
-        tags: data[0].tags || [],
         isEmergency: data[0].is_emergency || false,
         createdAt: data[0].created_at
       }
