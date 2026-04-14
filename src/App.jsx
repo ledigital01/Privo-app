@@ -251,7 +251,7 @@ function IAScanModal({ isOpen, onClose, initialFile = null }) {
     setFormData({ title: '', category: 'Autre', expiresAt: '', issuer: '', description: '', tags: [] })
   }
 
-  const handleClose = () => { if (step !== 'processing' && step !== 'review') { reset(); onClose(); } }
+  const handleClose = () => { if (step !== 'processing') { reset(); onClose(); } }
 
   const handleFileChange = async (e) => {
     const selectedFile = e.target.files[0]
