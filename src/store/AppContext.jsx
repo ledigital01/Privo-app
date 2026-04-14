@@ -370,6 +370,7 @@ export const AppProvider = ({ children }) => {
     verifyCode,
     canShare,
     checkFeature,
+    hasAlerts: expiringDocs.length > 0 && planLimits.features.expiryAlerts,
     isAuthenticated: !!authUser
   }
 

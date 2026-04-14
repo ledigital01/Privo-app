@@ -18,6 +18,8 @@ import BottomSheet from './components/BottomSheet'
 import { t } from './utils/i18n'
 import { supabase } from './utils/supabaseClient'
 import QuickShareModal from './components/Modals/QuickShareModal'
+import AddDocumentModal from './components/Modals/AddDocumentModal'
+import ManualAddModal from './components/Modals/ManualAddModal'
 import { Bell as NotificationsPageBell, ShieldAlert as ErrorShield } from 'lucide-react'
 
 // ----------------------------------------------------------------
@@ -241,11 +243,7 @@ function IAScanModal({ isOpen, onClose }) {
     setFormData({ title: '', category: 'Autre', expiresAt: '', issuer: '', description: '', tags: [] })
   }
 
-  const handleClose = () => { 
-    if (step === 'processing') return // Block close only during active processing
-    reset()
-    onClose()
-  }
+  const handleClose = () => { if (step !== 'processing' && step !== 'review') { reset(); onClose(); } }
 
   const handleFileChange = async (e) => {
     const selectedFile = e.target.files[0]
@@ -290,8 +288,8 @@ function IAScanModal({ isOpen, onClose }) {
       }
     } catch (error) {
       console.error("[SCAN] Erreur critique:", error)
-      alert(`Oups ! Quelque chose coince : ${error.message}`) 
-      setStep('review') 
+      alert(`Oups ! Quelque chose coince : ${error.message}`) // Feedback direct sur l'écran
+      setStep('review') // On passe en manuel en cas d'erreur pour ne pas bloquer l'utilisateur
     }
   }
 
@@ -299,35 +297,24 @@ function IAScanModal({ isOpen, onClose }) {
   const handleAddVerso = async (e) => {
     const versoFile = e.target.files[0]
     if (!versoFile) return
+    // On pourrait uploader ça aussi si on le voulait. Pour l'instant, c'est juste un placeholder visuel
     alert("Verso ajouté avec succès ! Il sera fusionné avec votre document.")
   }
 
   const handleFinalSave = async () => {
-    try {
-      setIsSaving(true)
-      console.log("[SCAN] Final Save payload:", { ...formData, filePath })
-      
-      const result = await addDocument({ 
-        ...formData, 
-        filePath,
-        iconName: getIconByCategory(formData.category) 
-      }, null)
-      
-      if (result.error) {
-        console.error("[SCAN] AddDocument Error:", result.error)
-        alert(`Erreur lors de l'archivage: ${result.error}`)
-        setIsSaving(false)
-        return
-      }
-
-      setStep('done')
-      if (window.navigator.vibrate) window.navigator.vibrate(50)
-      setTimeout(() => { reset(); onClose(); }, 2000)
-    } catch (err) {
-      console.error("[SCAN] Final Save Crash:", err)
-      alert(`Erreur imprévue: ${err.message}`)
+    setIsSaving(true)
+    // On passe le filePath déjà existant au lieu du fichier brut pour éviter le double upload
+    const result = await addDocument({ ...formData, filePath }, null)
+    
+    if (result.error) {
+      alert(`Erreur lors de l'archivage: ${result.error}`)
       setIsSaving(false)
+      return
     }
+
+    setStep('done')
+    if (window.navigator.vibrate) window.navigator.vibrate(50) // Vibration succès sur mobile
+    setTimeout(() => { reset(); onClose(); }, 2000)
   }
 
   if (!isOpen) return null
@@ -525,7 +512,7 @@ function DeleteModal({ isOpen, doc, onClose, onConfirm }) {
    PAGE — DASHBOARD (dynamic)
    ================================================================ */
 function Dashboard({ onAddClick, onEmergencyClick }) {
-  const { authUser, stats, expiringDocs, documents } = useApp()
+  const { authUser, stats, expiringDocs, documents, hasAlerts } = useApp()
   const navigate = useNavigate()
   const recentDocs = documents.slice(0, 3)
   const isEmpty = documents.length === 0
@@ -649,8 +636,8 @@ function Dashboard({ onAddClick, onEmergencyClick }) {
               ))}
             </div>
 
-            {/* IA Insights — only if expiring docs */}
-            {expiringDocs.length > 0 && (
+            {/* IA Insights — only if expiring docs and plan allows */}
+            {hasAlerts && expiringDocs.length > 0 && (
               <>
                 <div className="section-header">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -952,7 +939,16 @@ function DocumentDetail({ doc, onBack, onShare, onDeleteRequest, onEditRequest }
           <button className="action-btn" onClick={onShare}>
             <div className="icon-wrap md neutral"><Share2 size={22} /></div>{t('share')}
           </button>
-          <button className="action-btn" onClick={() => setShowAIModal(true)}>
+          <button 
+            className="action-btn" 
+            onClick={() => {
+              if (checkFeature('aiSummary')) {
+                setShowAIModal(true)
+              } else {
+                onUpgradeRequest?.("Le résumé IA est une fonctionnalité Pro.")
+              }
+            }}
+          >
             <div className="icon-wrap md primary"><Zap size={22} /></div>{t('ai_summary')}
           </button>
           <button className="action-btn" onClick={handleDownload}>
@@ -1205,13 +1201,20 @@ function SecuritySettingsModal({ isOpen, onClose }) {
 /* ================================================================
    MODAL — SETTINGS
    ================================================================ */
-function SettingsModal({ isOpen, onClose }) {
+function SettingsModal({ isOpen, onClose, onUpgradeRequest }) {
+  const { checkFeature } = useApp()
   const [lang, setLang] = useState(localStorage.getItem('digisafe_lang') || 'fr')
   const [pushNotifs, setPushNotifs] = useState(localStorage.getItem('digisafe_push') !== 'false')
   const [emailAlerts, setEmailAlerts] = useState(localStorage.getItem('digisafe_alert') !== 'false')
   const [darkTheme, setDarkTheme] = useState(localStorage.getItem('digisafe_theme') === 'dark')
 
+  const isAlertsAllowed = checkFeature('expiryAlerts')
+
   const togglePush = async () => {
+    if (!isAlertsAllowed) {
+      onUpgradeRequest?.("Les notifications Push sont réservées aux membres Pro.")
+      return
+    }
     const val = !pushNotifs
     setPushNotifs(val)
     localStorage.setItem('digisafe_push', val.toString())
@@ -1228,6 +1231,10 @@ function SettingsModal({ isOpen, onClose }) {
   }
   
   const toggleAlert = () => {
+    if (!isAlertsAllowed) {
+      onUpgradeRequest?.("Les alertes e-mail sont réservées aux membres Pro.")
+      return
+    }
     const val = !emailAlerts
     setEmailAlerts(val)
     localStorage.setItem('digisafe_alert', val.toString())
@@ -1284,24 +1291,30 @@ function SettingsModal({ isOpen, onClose }) {
 
         <div className="label-xs" style={{ marginBottom: 12 }}>{t('notifications')}</div>
         
-        <div className="action-row" style={{ alignItems: 'center', padding: '14px 16px', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)', marginBottom: 12 }}>
+        <div className="action-row" style={{ alignItems: 'center', padding: '14px 16px', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)', marginBottom: 12, opacity: isAlertsAllowed ? 1 : 0.6 }}>
           <div style={{ flex: 1 }}>
-            <div className="action-text">{t('push_notifs')}</div>
+            <div className="action-text" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {t('push_notifs')}
+              {!isAlertsAllowed && <span style={{ fontSize: '0.6rem', background: 'var(--c-primary)', color: 'white', padding: '2px 6px', borderRadius: 4, fontWeight: 800 }}>PRO</span>}
+            </div>
             <div className="action-desc" style={{ maxWidth: '90%' }}>{t('push_notifs_desc')}</div>
           </div>
           <label className="toggle-switch">
-            <input type="checkbox" checked={pushNotifs} onChange={togglePush} />
+            <input type="checkbox" checked={isAlertsAllowed && pushNotifs} onChange={togglePush} />
             <span className="toggle-slider"></span>
           </label>
         </div>
 
-        <div className="action-row" style={{ alignItems: 'center', padding: '14px 16px', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)', marginBottom: 24 }}>
+        <div className="action-row" style={{ alignItems: 'center', padding: '14px 16px', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)', marginBottom: 24, opacity: isAlertsAllowed ? 1 : 0.6 }}>
           <div style={{ flex: 1 }}>
-            <div className="action-text">{t('email_alerts')}</div>
+            <div className="action-text" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {t('email_alerts')}
+              {!isAlertsAllowed && <span style={{ fontSize: '0.6rem', background: 'var(--c-primary)', color: 'white', padding: '2px 6px', borderRadius: 4, fontWeight: 800 }}>PRO</span>}
+            </div>
             <div className="action-desc">{t('email_alerts_desc')}</div>
           </div>
           <label className="toggle-switch">
-            <input type="checkbox" checked={emailAlerts} onChange={toggleAlert} />
+            <input type="checkbox" checked={isAlertsAllowed && emailAlerts} onChange={toggleAlert} />
             <span className="toggle-slider"></span>
           </label>
         </div>
@@ -1411,7 +1424,7 @@ function ProfilePage({ onSecurityClick, onSettingsClick }) {
 
 function AppContent() {
   const navigate = useNavigate()
-  const { documents, deleteDocument, authUser, planLimits } = useApp()
+  const { documents, deleteDocument, authUser, planLimits, checkFeature } = useApp()
 
   const [modal, setModal] = useState(null)
   const [planLimitMsg, setPlanLimitMsg] = useState(null)
@@ -1429,7 +1442,23 @@ function AppContent() {
       setModal('PLAN_LIMIT')
       return
     }
-    setTimeout(() => setModal('SCAN'), 200)
+    // On ouvre d'abord le choix de la méthode
+    setModal('ADD_CHOICE')
+  }
+
+  // Fonction pour déclencher le scan IA (vérifie les droits)
+  const startIAScan = () => {
+    if (!checkFeature('aiScan')) {
+      setPlanLimitMsg("Le Scan Intelligent IA est réservé aux membres Pro. Utilisez la saisie manuelle ou passez au plan supérieur.")
+      setModal('PLAN_LIMIT')
+      return
+    }
+    setModal('SCAN')
+  }
+
+  const handleUpgradeRequest = (msg) => {
+    setPlanLimitMsg(msg)
+    setModal('PLAN_LIMIT')
   }
 
   const handleDeleteRequest = () => setModal('DELETE')
@@ -1446,7 +1475,7 @@ function AppContent() {
         <Routes>
           <Route path="/" element={
             <Dashboard 
-              onAddClick={() => setModal('SCAN')} 
+              onAddClick={handleScanClick} 
               onEmergencyClick={() => {
                 console.log("DEBUG: Triggering EMERGENCY modal");
                 setModal('EMERGENCY');
@@ -1454,15 +1483,21 @@ function AppContent() {
             />
           } />
           <Route path="/documents" element={<Library onDocClick={handleDocClick} />} />
-          <Route path="/detail" element={<DocumentDetail doc={selectedDoc} onBack={() => navigate(-1)} onShare={() => setModal('SHARE')} onDeleteRequest={handleDeleteRequest} onEditRequest={() => setModal('EDIT')} />} />
+          <Route path="/detail" element={<DocumentDetail doc={selectedDoc} onBack={() => navigate(-1)} onShare={() => setModal('SHARE')} onDeleteRequest={handleDeleteRequest} onEditRequest={() => setModal('EDIT')} onUpgradeRequest={handleUpgradeRequest} />} />
           <Route path="/notifications" element={<NotificationsPage onDocClick={handleDocClick} />} />
           <Route path="/profile" element={<ProfilePage onSecurityClick={() => setModal('SECURITY')} onSettingsClick={() => setModal('SETTINGS')} />} />
           <Route path="/subscription" element={<SubscriptionPage onBack={() => navigate(-1)} />} />
           <Route path="/help" element={<HelpPage />} />
         </Routes>
-        <BottomNav onAddClick={() => setModal('SCAN')} />
+        <BottomNav onAddClick={handleScanClick} />
         <button
-          onClick={() => setModal('CHAT')}
+          onClick={() => {
+            if (checkFeature('aiChat')) {
+              setModal('CHAT')
+            } else {
+              handleUpgradeRequest("L'assistant IA est réservé aux membres Pro.")
+            }
+          }}
           style={{
             position: 'fixed', bottom: 90, right: 20, zIndex: 40,
             width: 56, height: 56, borderRadius: '28px',
@@ -1478,11 +1513,19 @@ function AppContent() {
       </div>
 
       <EditDocumentModal isOpen={modal === 'EDIT'} onClose={() => setModal(null)} doc={selectedDoc} />
+      <AddDocumentModal 
+         isOpen={modal === 'ADD_CHOICE'} 
+         onClose={() => setModal(null)} 
+         onScanResult={startIAScan} 
+         onManualClick={() => setModal('MANUAL')}
+         onImportClick={() => setModal('MANUAL')} 
+      />
+      <ManualAddModal isOpen={modal === 'MANUAL'} onClose={() => setModal(null)} />
       <IAScanModal isOpen={modal === 'SCAN'} onClose={() => setModal(null)} />
       <DeleteModal isOpen={modal === 'DELETE'} onClose={() => setModal(null)} onConfirm={handleDeleteConfirm} doc={selectedDoc} />
       <QuickShareModal isOpen={modal === 'SHARE'} onClose={() => setModal(null)} doc={selectedDoc} />
       <SecuritySettingsModal isOpen={modal === 'SECURITY'} onClose={() => setModal(null)} />
-      <SettingsModal isOpen={modal === 'SETTINGS'} onClose={() => setModal(null)} />
+      <SettingsModal isOpen={modal === 'SETTINGS'} onClose={() => setModal(null)} onUpgradeRequest={handleUpgradeRequest} />
       <AIChatModal isOpen={modal === 'CHAT'} onClose={() => setModal(null)} />
       <EmergencyPage isOpen={modal === 'EMERGENCY'} onClose={() => setModal(null)} />
 

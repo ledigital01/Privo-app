@@ -13,9 +13,11 @@ export const PLANS = {
     maxStorageMb: 100,
     maxSharesPerMonth: 3,
     features: {
-      aiScan: false,        // Scan IA désactivé
-      unlimitedShare: false, // Partage limité à 3/mois
-      expiryAlerts: false,  // Alertes d'expiration automatiques désactivées
+      aiScan: false,
+      aiChat: false,
+      aiSummary: false,
+      unlimitedShare: false,
+      expiryAlerts: false,
       prioritySupport: false,
       multiUser: false,
       apiAccess: false,
@@ -30,6 +32,8 @@ export const PLANS = {
     maxSharesPerMonth: Infinity,
     features: {
       aiScan: true,
+      aiChat: true,
+      aiSummary: true,
       unlimitedShare: true,
       expiryAlerts: true,
       prioritySupport: true,
@@ -46,6 +50,8 @@ export const PLANS = {
     maxSharesPerMonth: Infinity,
     features: {
       aiScan: true,
+      aiChat: true,
+      aiSummary: true,
       unlimitedShare: true,
       expiryAlerts: true,
       prioritySupport: true,

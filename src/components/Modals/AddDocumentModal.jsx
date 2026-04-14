@@ -2,7 +2,7 @@ import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Camera, FileText, UploadCloud, ChevronRight } from 'lucide-react'
 
-const AddDocumentModal = ({ isOpen, onClose, onScanResult }) => {
+const AddDocumentModal = ({ isOpen, onClose, onScanResult, onImportClick, onManualClick }) => {
   if (!isOpen) return null
 
   return (
@@ -61,7 +61,10 @@ const AddDocumentModal = ({ isOpen, onClose, onScanResult }) => {
                   <ChevronRight size={20} className="text-[#eceef0] group-hover:text-[#003d9b] transition-colors" />
                 </button>
 
-                <button className="flex items-center gap-4 p-5 bg-white rounded-2xl border border-transparent hover:border-[#003d9b]/20 active:scale-95 transition-all group">
+                <button 
+                  onClick={onImportClick}
+                  className="flex items-center gap-4 p-5 bg-white rounded-2xl border border-transparent hover:border-[#003d9b]/20 active:scale-95 transition-all group"
+                >
                   <div className="w-14 h-14 bg-[#dae2ff] flex-center rounded-xl text-[#003d9b] group-hover:bg-[#003d9b] group-hover:text-white transition-colors">
                     <UploadCloud size={28} />
                   </div>
@@ -72,7 +75,10 @@ const AddDocumentModal = ({ isOpen, onClose, onScanResult }) => {
                   <ChevronRight size={20} className="text-[#eceef0] group-hover:text-[#003d9b] transition-colors" />
                 </button>
                 
-                <button className="flex items-center gap-4 p-5 bg-white rounded-2xl border border-transparent hover:border-[#003d9b]/20 active:scale-95 transition-all group">
+                <button 
+                  onClick={onManualClick}
+                  className="flex items-center gap-4 p-5 bg-white rounded-2xl border border-transparent hover:border-[#003d9b]/20 active:scale-95 transition-all group"
+                >
                   <div className="w-14 h-14 bg-[#dae2ff] flex-center rounded-xl text-[#003d9b] group-hover:bg-[#003d9b] group-hover:text-white transition-colors">
                     <FileText size={28} />
                   </div>
