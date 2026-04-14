@@ -302,7 +302,9 @@ export default function SubscriptionPage({ onBack }) {
                     <Database size={16} color="var(--c-primary)" />
                     <span className="body-sm" style={{ fontWeight: 600 }}>Espace de stockage</span>
                   </div>
-                  <span className="label-xs">{storageUsed} Mo / {storageLimit / 1024} Go</span>
+                  <span className="label-xs">
+                    {storageUsed} Mo / {storageLimit >= 1024 ? (storageLimit / 1024).toFixed(0) + ' Go' : storageLimit + ' Mo'}
+                  </span>
                 </div>
                 <div style={{ height: 6, background: 'var(--c-surface-2)', borderRadius: 3, overflow: 'hidden' }}>
                   <div style={{ width: `${storagePercent}%`, height: '100%', background: 'var(--c-primary)', borderRadius: 3, transition: 'width 0.5s' }} />
