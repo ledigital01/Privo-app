@@ -237,6 +237,7 @@ function IAScanModal({ isOpen, onClose, initialFile = null }) {
   const [formData, setFormData] = useState({ title: '', category: 'Autre', expiresAt: '', issuer: '', description: '', tags: [] })
   const [isSaving, setIsSaving] = useState(false)
   const [tempTag, setTempTag] = useState('')
+  const [aiTags, setAiTags] = useState([])
   const [isLargeFile, setIsLargeFile] = useState(false)
 
   const isPro = authUser?.plan === 'pro' || authUser?.plan === 'business'
@@ -250,6 +251,7 @@ function IAScanModal({ isOpen, onClose, initialFile = null }) {
   const reset = () => {
     setStep('upload'); setFile(null); setPreviewUrl(null); setFilePath(null); setIsSaving(false)
     setFormData({ title: '', category: 'Autre', expiresAt: '', issuer: '', description: '', tags: [] })
+    setAiTags([])
   }
 
   const handleClose = () => { if (step !== 'processing') { reset(); onClose(); } }
@@ -291,8 +293,9 @@ function IAScanModal({ isOpen, onClose, initialFile = null }) {
                expiresAt: analysis.expiresAt || '',
                issuer: analysis.issuer || '',
                description: analysis.description || '',
-               tags: analysis.tags || []
+               tags: []
              })
+             setAiTags(analysis.tags || [])
              setStep('review')
              return // Succès IA
           }
@@ -471,18 +474,53 @@ function IAScanModal({ isOpen, onClose, initialFile = null }) {
 
                 <div>
                   <div className="label-xs">{t('scan_tags')}</div>
+                  
+                  {/* Champ d'ajout manuel et affichage des tags sélectionnés */}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
                     {formData.tags.map(tag => (
                       <span key={tag} className="badge primary" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        {tag} <X size={12} onClick={() => setFormData({ ...formData, tags: formData.tags.filter(t => t !== tag) })} />
+                        {tag} <X size={12} onClick={() => setFormData({ ...formData, tags: formData.tags.filter(t => t !== tag) })} style={{ cursor: 'pointer' }} />
                       </span>
                     ))}
                   </div>
+                  
                   <input className="input-field" placeholder={t('scan_add_tag')} value={tempTag} onKeyPress={e => {
                     if (e.key === 'Enter' && tempTag) {
-                      setFormData({ ...formData, tags: [...formData.tags, tempTag] }); setTempTag('')
+                      e.preventDefault()
+                      if (!formData.tags.includes(tempTag)) {
+                        setFormData({ ...formData, tags: [...formData.tags, tempTag] })
+                      }
+                      setTempTag('')
                     }
                   }} onChange={e => setTempTag(e.target.value)} />
+
+                  {/* CHANGER ICI: Afficher les tags suggérés par l'IA comme des boutons d'ajout */}
+                  {aiTags.length > 0 && (
+                    <div style={{ marginTop: 12 }}>
+                      <div className="label-xs" style={{ color: 'var(--c-primary)', marginBottom: 6 }}>✨ Suggestions IA (cliquez pour ajouter)</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {aiTags.map(tag => (
+                          <span 
+                            key={tag} 
+                            onClick={() => {
+                              if (!formData.tags.includes(tag)) {
+                                setFormData(prev => ({ ...prev, tags: [...prev.tags, tag] }))
+                              }
+                              setAiTags(prev => prev.filter(t => t !== tag))
+                            }}
+                            className="badge" 
+                            style={{ 
+                              display: 'flex', alignItems: 'center', gap: 4, 
+                              background: 'var(--c-surface-2)', border: '1px dashed var(--c-primary-soft)',
+                              cursor: 'pointer', color: 'var(--c-text)'
+                            }}
+                          >
+                            <span style={{ fontSize: '1rem', color: 'var(--c-primary)' }}>+</span> {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {formData.category?.toLowerCase() === 'identité' && (
