@@ -1140,13 +1140,21 @@ input:checked + .toggle-slider:before {
 }
 
 @keyframes progressLoad {
-  0% {
-    width: 0%
-  }
+  0% { width: 0% }
+  100% { width: 100% }
+}
 
-  100% {
-    width: 100%
-  }
+@keyframes progress-slow {
+  0% { width: 0% }
+  30% { width: 40% }
+  60% { width: 70% }
+  90% { width: 95% }
+  100% { width: 99% }
+}
+
+@keyframes progress-fast {
+  0% { width: 0% }
+  100% { width: 100% }
 }
 
 .input-field {

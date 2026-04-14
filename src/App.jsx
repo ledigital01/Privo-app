@@ -237,6 +237,7 @@ function IAScanModal({ isOpen, onClose, initialFile = null }) {
   const [formData, setFormData] = useState({ title: '', category: 'Autre', expiresAt: '', issuer: '', description: '', tags: [] })
   const [isSaving, setIsSaving] = useState(false)
   const [tempTag, setTempTag] = useState('')
+  const [isLargeFile, setIsLargeFile] = useState(false)
 
   const isPro = checkFeature('aiScan')
 
@@ -256,7 +257,9 @@ function IAScanModal({ isOpen, onClose, initialFile = null }) {
   const handleFileChange = async (e) => {
     const selectedFile = e.target.files[0]
     if (!selectedFile) return
-    setPreviewUrl(URL.createObjectURL(selectedFile))
+    
+    setIsLargeFile(selectedFile.size > 3 * 1024 * 1024) // > 3MB
+    setPreviewUrl(selectedFile.type.startsWith('image/') ? URL.createObjectURL(selectedFile) : null)
     setFile(selectedFile)
     setStep('processing')
 
@@ -359,7 +362,7 @@ function IAScanModal({ isOpen, onClose, initialFile = null }) {
 
           {step === 'processing' && (
             <div style={{ textAlign: 'center', padding: '10px 0' }}>
-              <div style={{ position: 'relative', width: '100%', height: 280, background: '#000', borderRadius: 'var(--r-xl)', overflow: 'hidden', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ position: 'relative', width: '100%', height: 240, background: '#000', borderRadius: 'var(--r-xl)', overflow: 'hidden', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {previewUrl && file?.type.startsWith('image/') ? (
                   <img src={previewUrl} style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: 0.6 }} />
                 ) : (
@@ -368,11 +371,21 @@ function IAScanModal({ isOpen, onClose, initialFile = null }) {
                 <div className="scan-line-active" />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <p className="title-sm">{t('scan_ai_desc')}</p>
-                <div className="progress-bar-container" style={{ width: '60%', margin: '0 auto', height: 4, background: 'var(--c-surface-2)', borderRadius: 2 }}>
-                  <div className="progress-bar-fill" /> {/* Animation CSS progress */}
+                <p className="title-sm">
+                  {isLargeFile ? t('upload_heavy') : t('scan_ai_desc')}
+                </p>
+                <div className="progress-bar-container" style={{ width: '80%', margin: '0 auto', height: 6, background: 'var(--c-surface-2)', borderRadius: 3, overflow: 'hidden' }}>
+                  <div className="progress-bar-fill" style={{ 
+                    animation: isLargeFile ? 'progress-slow 30s linear infinite' : 'progress-fast 2s ease-out forwards',
+                    background: 'var(--c-primary)',
+                    height: '100%'
+                  }} />
                 </div>
-                <p className="body-sm" style={{ opacity: 0.6 }}>{t('scan_ai_sub')}</p>
+                <p className="body-sm" style={{ opacity: 0.7, padding: '0 20px' }}>
+                  {isLargeFile 
+                    ? "Ce fichier est volumineux. Votre DigiSAFE sécurise le transfert, merci de patienter quelques instants sans fermer l'écran..." 
+                    : t('scan_ai_sub')}
+                </p>
               </div>
             </div>
           )}
