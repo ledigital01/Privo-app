@@ -319,6 +319,21 @@ export const AppProvider = ({ children }) => {
     return updateDocument(id, { isEmergency: status })
   }
 
+  const updateUserPlan = async (newPlanId) => {
+    if (!authUser) return { error: "Non authentifié" }
+    
+    const { error } = await supabase
+      .from('profiles')
+      .update({ plan: newPlanId })
+      .eq('id', authUser.id)
+
+    if (!error) {
+      setAuthUser(prev => ({ ...prev, plan: newPlanId }))
+      return { success: true }
+    }
+    return { error: error.message }
+  }
+
   // ----------------------------------------------------------------
   // 8. Stats & Computed values
   // ----------------------------------------------------------------
@@ -370,6 +385,7 @@ export const AppProvider = ({ children }) => {
     verifyCode,
     canShare,
     checkFeature,
+    updateUserPlan,
     hasAlerts: expiringDocs.length > 0 && planLimits.features.expiryAlerts,
     isAuthenticated: !!authUser
   }

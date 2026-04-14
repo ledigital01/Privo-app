@@ -15,16 +15,28 @@ function PaymentModal({ isOpen, onClose, plan, onSuccess, onFail }) {
   const [step, setStep] = useState('method') // 'method' | 'processing' | 'success' | 'fail'
   const [method, setMethod] = useState(null)
 
+  const { updateUserPlan } = useApp()
+
   if (!isOpen) return null
 
-  const handlePay = (m) => {
+  const handlePay = async (m) => {
     setMethod(m)
     setStep('processing')
-    // Simulate processing
-    setTimeout(() => {
-      const ok = Math.random() > 0.2 // 80% success for demo
-      setStep(ok ? 'success' : 'fail')
-    }, 2000)
+    
+    // Simulate processing delay
+    await new Promise(r => setTimeout(r, 2000))
+
+    const ok = Math.random() > 0.05 // 95% success for better demo
+    if (ok) {
+      const result = await updateUserPlan(plan.id)
+      if (result.success) {
+        setStep('success')
+      } else {
+        setStep('fail')
+      }
+    } else {
+      setStep('fail')
+    }
   }
 
   const handleClose = () => {
