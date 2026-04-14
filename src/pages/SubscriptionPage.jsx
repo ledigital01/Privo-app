@@ -248,10 +248,16 @@ export default function SubscriptionPage({ onBack }) {
   const docLimit = currentPlanDef.maxDocuments
   const docPercent = Math.min(100, (docCount / docLimit) * 100)
 
-  // Calcule la taille totale (simulation ou réel si disponible)
   const storageLimit = currentPlanDef.maxStorageMb
   const storageUsed = 12.5 // Simulation en Mo pour l'instant
   const storagePercent = (storageUsed / storageLimit) * 100
+
+  // Fonction pour déterminer la couleur de progression
+  const getProgressColor = (percent) => {
+    if (percent > 85) return 'var(--c-danger)' // Rouge
+    if (percent > 60) return '#f59e0b' // Orange (Amber)
+    return 'var(--c-success)' // Vert
+  }
 
   return (
     <>
@@ -291,7 +297,7 @@ export default function SubscriptionPage({ onBack }) {
                   <span className="label-xs">{docCount} / {docLimit === Infinity ? '∞' : docLimit}</span>
                 </div>
                 <div style={{ height: 6, background: 'var(--c-surface-2)', borderRadius: 3, overflow: 'hidden' }}>
-                  <div style={{ width: `${docPercent}%`, height: '100%', background: docPercent > 90 ? 'var(--c-danger)' : 'var(--c-primary)', borderRadius: 3, transition: 'width 0.5s' }} />
+                  <div style={{ width: `${docPercent}%`, height: '100%', background: getProgressColor(docPercent), borderRadius: 3, transition: 'width 0.5s' }} />
                 </div>
               </div>
 
@@ -307,7 +313,7 @@ export default function SubscriptionPage({ onBack }) {
                   </span>
                 </div>
                 <div style={{ height: 6, background: 'var(--c-surface-2)', borderRadius: 3, overflow: 'hidden' }}>
-                  <div style={{ width: `${storagePercent}%`, height: '100%', background: 'var(--c-primary)', borderRadius: 3, transition: 'width 0.5s' }} />
+                  <div style={{ width: `${storagePercent}%`, height: '100%', background: getProgressColor(storagePercent), borderRadius: 3, transition: 'width 0.5s' }} />
                 </div>
               </div>
             </div>
