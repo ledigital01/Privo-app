@@ -362,18 +362,19 @@ export default function SubscriptionPage({ onBack }) {
                   Gérez jusqu'à 5 collaborateurs pour co-gérer ce coffre-fort d'entreprise de 50 Go.
                 </p>
                 
-                <div style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
                   <input 
                     type="email" 
                     placeholder="email.du.collaborateur@exemple.com" 
                     className="input-field" 
-                    style={{ flex: 1 }} 
+                    style={{ width: '100%', fontSize: '0.9rem' }}
                   />
                   <button 
                     className="btn-primary" 
+                    style={{ width: '100%' }}
                     onClick={() => alert("L'invitation sécurisée a été envoyée avec succès à votre collaborateur ! Il aura bientôt accès au coffre-fort.")}
                   >
-                    Inviter
+                    Envoyer l'invitation
                   </button>
                 </div>
 
