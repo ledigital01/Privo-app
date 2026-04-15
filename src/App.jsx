@@ -840,7 +840,7 @@ function Library({ onDocClick }) {
 
   return (
     <div className="page-enter">
-      <div className="top-bar">
+      <div className="top-bar" style={{ position: 'relative', zIndex: 1000 }}>
         <div>
           <h1 className="title-lg">{t('library_title')}</h1>
           <p className="body-sm">{displayed.length} {t('document_s')}</p>
