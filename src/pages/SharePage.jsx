@@ -160,7 +160,7 @@ const SharePage = () => {
               </div>
               <h2 className="title-sm" style={{ color: 'white' }}>{shareData.documents.title}</h2>
               <div style={{ marginTop: 8, fontSize: '0.75rem', opacity: 0.8, display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
-                 <Clock size={12} /> Expire le {new Date(shareData.expires_at).toLocaleDateString()} à {new Date(shareData.expires_at).toLocaleTimeString([], { hour: '2h', minute: '2h' })}
+                 <Clock size={12} /> Expire le {new Date(shareData.expires_at).toLocaleDateString('fr-FR')} à {new Date(shareData.expires_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
               </div>
             </div>
 
