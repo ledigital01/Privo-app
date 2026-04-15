@@ -343,8 +343,51 @@ export default function SubscriptionPage({ onBack }) {
             )}
           </div>
 
+          {/* TEAM MANAGEMENT (BUSINESS ONLY) */}
+          {currentPlanId === 'business' && (
+            <div style={{ marginTop: 24, marginBottom: 32 }}>
+              <div className="section-header">
+                <h2>Équipe & Collaborateurs</h2>
+              </div>
+              <div className="card" style={{ padding: 20 }}>
+                <p className="body-sm" style={{ color: 'var(--c-text-muted)', marginBottom: 16 }}>
+                  Gérez jusqu'à 5 collaborateurs pour co-gérer ce coffre-fort d'entreprise de 50 Go.
+                </p>
+                
+                <div style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
+                  <input 
+                    type="email" 
+                    placeholder="email.du.collaborateur@exemple.com" 
+                    className="input-field" 
+                    style={{ flex: 1 }} 
+                  />
+                  <button 
+                    className="btn-primary" 
+                    onClick={() => alert("L'invitation sécurisée a été envoyée avec succès à votre collaborateur ! Il aura bientôt accès au coffre-fort.")}
+                  >
+                    Inviter
+                  </button>
+                </div>
+
+                {/* Liste des membres actife (MOCK) */}
+                <div className="space-y-3">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div className="flex-center" style={{ width: 32, height: 32, background: 'var(--c-primary)', color: 'white', borderRadius: 10, fontWeight: 700, fontSize: '0.8rem' }}>M</div>
+                      <div>
+                        <p className="body-sm" style={{ fontWeight: 600, margin: 0 }}>Moi (Propriétaire)</p>
+                        <p style={{ fontSize: '0.7rem', color: 'var(--c-text-muted)', margin: 0 }}>Plan Business Actif</p>
+                      </div>
+                    </div>
+                    <span className="badge success" style={{ background: 'var(--c-success-soft)', color: 'var(--c-success)', border: 'none' }}>Admin</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Plans */}
-          <div className="section-header">
+          <div className="section-header" style={{ marginTop: 24 }}>
             <h2>Choisir un plan</h2>
           </div>
 
