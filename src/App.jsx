@@ -817,10 +817,25 @@ const ALL_CATEGORIES = [t('cat_all'), t('cat_identity'), t('cat_finance'), t('ca
 function Library({ onDocClick }) {
   const { filteredDocuments, searchQuery, setSearchQuery } = useApp()
   const [cat, setCat] = useState(t('cat_all'))
+  const [sortOrder, setSortOrder] = useState('recent')
+  const [showFilterMenu, setShowFilterMenu] = useState(false)
 
-  const displayed = cat === t('cat_all')
+  let displayed = cat === t('cat_all')
     ? filteredDocuments
     : filteredDocuments.filter(d => d.type === cat)
+
+  displayed = [...displayed].sort((a, b) => {
+    switch (sortOrder) {
+      case 'recent': return new Date(b.createdAt) - new Date(a.createdAt)
+      case 'old': return new Date(a.createdAt) - new Date(b.createdAt)
+      case 'az': return a.title.localeCompare(b.title)
+      case 'expiring': 
+        if (!a.expiresAt) return 1;
+        if (!b.expiresAt) return -1;
+        return new Date(a.expiresAt) - new Date(b.expiresAt)
+      default: return 0;
+    }
+  })
 
   return (
     <div className="page-enter">
@@ -829,13 +844,48 @@ function Library({ onDocClick }) {
           <h1 className="title-lg">{t('library_title')}</h1>
           <p className="body-sm">{displayed.length} {t('document_s')}</p>
         </div>
-        <button
-          className="notif-btn"
-          onClick={() => alert(t('filters_soon'))}
-          title="Filtres"
-        >
-          <Filter size={18} />
-        </button>
+        <div style={{ position: 'relative' }}>
+          <button
+            className="notif-btn"
+            onClick={() => setShowFilterMenu(!showFilterMenu)}
+            title="Trier ou filtrer"
+          >
+            <Filter size={18} />
+          </button>
+          
+          <AnimatePresence>
+            {showFilterMenu && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }} 
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                style={{ position: 'absolute', top: 45, right: 0, background: 'var(--c-surface)', borderRadius: 'var(--r-md)', padding: '12px 8px', boxShadow: 'var(--shadow-lg)', zIndex: 100, border: '1px solid var(--c-border)', minWidth: 180 }}
+              >
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--c-text-muted)', marginBottom: 8, paddingLeft: 8 }}>TRIER PAR</div>
+                {[
+                  { id: 'recent', label: 'Plus récents' },
+                  { id: 'old', label: 'Plus anciens' },
+                  { id: 'az', label: 'A à Z' },
+                  { id: 'expiring', label: 'Expirant bientôt' }
+                ].map(opt => (
+                  <button 
+                    key={opt.id} 
+                    onClick={() => { setSortOrder(opt.id); setShowFilterMenu(false) }}
+                    style={{ 
+                      display: 'block', width: '100%', textAlign: 'left', padding: '10px 12px', 
+                      background: sortOrder === opt.id ? 'var(--c-primary-soft)' : 'transparent', 
+                      color: sortOrder === opt.id ? 'var(--c-primary)' : 'var(--c-text)', 
+                      fontWeight: sortOrder === opt.id ? 600 : 400,
+                      border: 'none', borderRadius: 'var(--r-sm)', fontSize: '0.85rem', cursor: 'pointer', marginBottom: 2 
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       <div className="page-content" style={{ paddingTop: 8 }}>
