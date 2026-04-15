@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   Home, FolderOpen, Plus, User, Bell,
   Shield, Clock, Zap, AlertCircle, ChevronRight,
