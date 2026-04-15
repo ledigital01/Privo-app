@@ -823,7 +823,14 @@ function Library({ onDocClick }) {
 
   let displayed = cat === t('cat_all')
     ? filteredDocuments
-    : filteredDocuments.filter(d => d.type === cat)
+    : filteredDocuments.filter(d => {
+        const type = (d.type || '').toLowerCase()
+        const target = cat.toLowerCase()
+        if (target.includes('contrat') && type.includes('contrat')) return true;
+        if ((target.includes('étude') || target.includes('etude')) && 
+            (type.includes('étude') || type.includes('etude'))) return true;
+        return type === target
+      })
 
   displayed = [...displayed].sort((a, b) => {
     switch (sortOrder) {
