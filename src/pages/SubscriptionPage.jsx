@@ -252,8 +252,10 @@ export default function SubscriptionPage({ onBack }) {
   const [selectedPlan, setSelectedPlan] = useState(null)
   const [openFaq, setOpenFaq] = useState(null)
 
-  const currentPlanId = authUser?.plan || 'free'
-  const currentPlanDef = PLAN_DEFS[currentPlanId]
+  // Normaliser l'ID du plan : gérer les alias et la casse
+  const rawPlanId = (authUser?.plan || 'free').toLowerCase()
+  const currentPlanId = rawPlanId === 'enterprise' ? 'business' : rawPlanId
+  const currentPlanDef = PLAN_DEFS[currentPlanId] || PLAN_DEFS['free']
   
   // Stats usage (en attendant les stats backend complètes, on utilise les documents chargés)
   const docCount = documents?.length || 0
@@ -274,6 +276,12 @@ export default function SubscriptionPage({ onBack }) {
   return (
     <>
       <div className="page-enter">
+        {/* DEBUG TEMPORAIRE — à retirer après vérification */}
+        {process.env.NODE_ENV !== 'production' && (
+          <div style={{ background: '#fef9c3', padding: '4px 12px', fontSize: '0.7rem', fontFamily: 'monospace' }}>
+            Plan DB brut: <strong>{authUser?.plan || 'non défini'}</strong> → Normalisé: <strong>{currentPlanId}</strong>
+          </div>
+        )}
         {/* Top bar */}
         <div className="top-bar">
           <button className="notif-btn" onClick={onBack} style={{ width: 40, height: 40 }}>
