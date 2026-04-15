@@ -181,42 +181,45 @@ function PaymentModal({ isOpen, onClose, plan, onSuccess, onFail }) {
 
 /* ================================================================
    PAGE — SUBSCRIPTION / PRICING
+   Pricing config — modifiez uniquement ces constantes
    ================================================================ */
-const PLANS = [
+const PRICING = {
+  pro:      { monthly: 3.5,  annual: 29  },
+  business: { monthly: 13,   annual: 99  },
+}
+
+const buildPlans = (cycle) => [
   {
     id: 'free',
     name: 'Gratuit',
-    price: '0 FCFA',
+    price: '$0',
     period: '/mois',
     icon: <Shield size={28} />,
     color: 'neutral',
-    current: true,
     features: [
       '5 documents maximum',
       'Scan manuel uniquement',
       'Stockage 100 Mo',
       'Partage limité (3/mois)',
     ],
-    missing: [
-      'IA illimitée',
-      'Documents illimités',
-      'Accès prioritaire',
-    ],
+    missing: ['IA illimitée', 'Documents illimités', 'Accès prioritaire'],
   },
   {
     id: 'pro',
     name: 'Pro',
-    price: '4 900 FCFA',
-    period: '/mois',
+    price: cycle === 'annual' ? `$${PRICING.pro.annual}` : `$${PRICING.pro.monthly}`,
+    period: cycle === 'annual' ? '/an' : '/mois',
+    promo: cycle === 'annual' ? '+3 mois offerts 🎁' : null,
+    saving: cycle === 'annual' ? `Économisez $${((PRICING.pro.monthly * 12) - PRICING.pro.annual).toFixed(0)}` : null,
     icon: <Star size={28} />,
     color: 'primary',
     recommended: true,
     features: [
       '100 documents',
-      'Scan IA avancé',
+      'Scan IA avancé (Claude)',
       'Stockage 5 Go',
       'Partage sécurisé illimité',
-      'Alertes d\'expiration automatiques',
+      "Alertes d'expiration automatiques",
       'Support prioritaire',
     ],
     missing: [],
@@ -224,8 +227,10 @@ const PLANS = [
   {
     id: 'business',
     name: 'Business',
-    price: '12 500 FCFA',
-    period: '/mois',
+    price: cycle === 'annual' ? `$${PRICING.business.annual}` : `$${PRICING.business.monthly}`,
+    period: cycle === 'annual' ? '/an' : '/mois',
+    promo: cycle === 'annual' ? `Économisez $${((PRICING.business.monthly * 12) - PRICING.business.annual).toFixed(0)}/an 💰` : null,
+    saving: cycle === 'annual' ? `vs $${PRICING.business.monthly * 12}/an en mensuel` : null,
     icon: <Crown size={28} />,
     color: 'warn',
     features: [
@@ -234,7 +239,7 @@ const PLANS = [
       'Stockage 50 Go',
       'Multi-utilisateurs (5 max)',
       'Tableau de bord entreprise',
-      'API d\'intégration',
+      "API d'intégration",
       'Support dédié 24/7',
     ],
     missing: [],
@@ -251,6 +256,9 @@ export default function SubscriptionPage({ onBack }) {
   const { authUser, documents, stats } = useApp()
   const [selectedPlan, setSelectedPlan] = useState(null)
   const [openFaq, setOpenFaq] = useState(null)
+  const [billingCycle, setBillingCycle] = useState('monthly') // 'monthly' | 'annual'
+
+  const PLANS = buildPlans(billingCycle)
 
   // Normaliser l'ID du plan : gérer les alias et la casse
   const rawPlanId = (authUser?.plan || 'free').toLowerCase()
@@ -276,12 +284,6 @@ export default function SubscriptionPage({ onBack }) {
   return (
     <>
       <div className="page-enter">
-        {/* DEBUG TEMPORAIRE — à retirer après vérification */}
-        {process.env.NODE_ENV !== 'production' && (
-          <div style={{ background: '#fef9c3', padding: '4px 12px', fontSize: '0.7rem', fontFamily: 'monospace' }}>
-            Plan DB brut: <strong>{authUser?.plan || 'non défini'}</strong> → Normalisé: <strong>{currentPlanId}</strong>
-          </div>
-        )}
         {/* Top bar */}
         <div className="top-bar">
           <button className="notif-btn" onClick={onBack} style={{ width: 40, height: 40 }}>
@@ -400,6 +402,47 @@ export default function SubscriptionPage({ onBack }) {
             <h2>Choisir un plan</h2>
           </div>
 
+          {/* Toggle Mensuel / Annuel */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+            <div style={{
+              display: 'inline-flex', background: 'var(--c-surface-2)',
+              borderRadius: 999, padding: 4, gap: 4
+            }}>
+              <button
+                onClick={() => setBillingCycle('monthly')}
+                style={{
+                  padding: '8px 20px', borderRadius: 999, border: 'none', cursor: 'pointer',
+                  fontFamily: 'Manrope', fontWeight: 700, fontSize: '0.85rem',
+                  background: billingCycle === 'monthly' ? 'white' : 'transparent',
+                  color: billingCycle === 'monthly' ? 'var(--c-primary)' : 'var(--c-text-muted)',
+                  boxShadow: billingCycle === 'monthly' ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
+                  transition: 'all 0.2s'
+                }}
+              >
+                Mensuel
+              </button>
+              <button
+                onClick={() => setBillingCycle('annual')}
+                style={{
+                  padding: '8px 20px', borderRadius: 999, border: 'none', cursor: 'pointer',
+                  fontFamily: 'Manrope', fontWeight: 700, fontSize: '0.85rem',
+                  background: billingCycle === 'annual' ? 'var(--c-primary)' : 'transparent',
+                  color: billingCycle === 'annual' ? 'white' : 'var(--c-text-muted)',
+                  boxShadow: billingCycle === 'annual' ? '0 2px 8px rgba(0,61,155,0.3)' : 'none',
+                  transition: 'all 0.2s',
+                  display: 'flex', alignItems: 'center', gap: 6
+                }}
+              >
+                Annuel
+                <span style={{
+                  background: billingCycle === 'annual' ? 'rgba(255,255,255,0.25)' : 'var(--c-success)',
+                  color: 'white', fontSize: '0.65rem', fontWeight: 800,
+                  padding: '2px 7px', borderRadius: 999
+                }}>-20%</span>
+              </button>
+            </div>
+          </div>
+
           <div className="space-y-3" style={{ marginBottom: 32 }}>
             {PLANS.map(plan => (
               <div
@@ -449,9 +492,9 @@ export default function SubscriptionPage({ onBack }) {
                     }}>
                       {plan.name}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, flexWrap: 'wrap' }}>
                       <span style={{
-                        fontFamily: 'Manrope', fontWeight: 800, fontSize: '1.4rem',
+                        fontFamily: 'Manrope', fontWeight: 800, fontSize: '1.5rem',
                         color: plan.recommended ? 'white' : 'var(--c-text)'
                       }}>
                         {plan.price}
@@ -463,6 +506,27 @@ export default function SubscriptionPage({ onBack }) {
                         {plan.period}
                       </span>
                     </div>
+                    {/* Badge promo */}
+                    {plan.promo && (
+                      <div style={{ marginTop: 4 }}>
+                        <span style={{
+                          background: plan.recommended ? 'rgba(255,255,255,0.25)' : '#fef3c7',
+                          color: plan.recommended ? 'white' : '#92400e',
+                          fontSize: '0.7rem', fontWeight: 700, padding: '3px 8px', borderRadius: 999
+                        }}>
+                          {plan.promo}
+                        </span>
+                      </div>
+                    )}
+                    {/* Économie */}
+                    {plan.saving && (
+                      <p style={{
+                        fontSize: '0.68rem', marginTop: 2,
+                        color: plan.recommended ? 'rgba(255,255,255,0.6)' : 'var(--c-text-muted)'
+                      }}>
+                        {plan.saving}
+                      </p>
+                    )}
                   </div>
                 </div>
 
