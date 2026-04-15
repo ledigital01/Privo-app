@@ -170,6 +170,20 @@ const SharePage = () => {
                   <p className="title-xs" style={{ textTransform: 'uppercase', letterSpacing: 1 }}>{shareData.documents.type}</p>
                </div>
 
+               {/* Aperçu du document (Image) */}
+               {signedUrl && shareData.documents.file_path.match(/\.(jpeg|jpg|gif|png|webp)$/i) && (
+                 <div style={{ marginBottom: 24, borderRadius: 'var(--r-md)', overflow: 'hidden', border: '1px solid var(--c-border)', background: 'var(--c-surface-2)', display: 'flex', justifyContent: 'center' }}>
+                   <img src={signedUrl} alt="Aperçu" style={{ maxWidth: '100%', maxHeight: 300, objectFit: 'contain' }} />
+                 </div>
+               )}
+               
+               {/* Aperçu du document (PDF) */}
+               {signedUrl && shareData.documents.file_path.match(/\.(pdf)$/i) && (
+                 <div style={{ marginBottom: 24, borderRadius: 'var(--r-md)', overflow: 'hidden', border: '1px solid var(--c-border)', background: 'var(--c-surface-2)', height: 300 }}>
+                   <iframe src={`${signedUrl}#view=FitH`} width="100%" height="100%" style={{ border: 'none' }} title="Aperçu PDF" />
+                 </div>
+               )}
+
                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <button 
                     onClick={handleDownload}
