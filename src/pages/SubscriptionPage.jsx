@@ -382,10 +382,13 @@ function getPlanPrice(planId, billing) {
 
 export default function SubscriptionPage({ onBack }) {
   const { authUser, documents, stats } = useApp()
+  // Normaliser l'ID du plan : gérer les alias et la casse
+  const rawPlanId = (authUser?.plan || 'free').toLowerCase()
+  const currentPlanId = rawPlanId === 'enterprise' ? 'business' : rawPlanId
+  
   const [selectedPlan, setSelectedPlan] = useState(null)
   const [openFaq, setOpenFaq] = useState(null)
   const [billing, setBilling] = useState('monthly') // 'monthly' | 'yearly'
-  const currentPlanId = authUser?.plan || 'free'
 
   // --- TEAM MANAGEMENT STATE ---
   const [inviteEmail, setInviteEmail] = useState('')
@@ -458,9 +461,6 @@ export default function SubscriptionPage({ onBack }) {
     setInvitations(prev => prev.filter(inv => inv.id !== id))
   }
 
-  // Normaliser l'ID du plan : gérer les alias et la casse
-  const rawPlanId = (authUser?.plan || 'free').toLowerCase()
-  const currentPlanId = rawPlanId === 'enterprise' ? 'business' : rawPlanId
   const currentPlanDef = PLAN_DEFS[currentPlanId] || PLAN_DEFS['free']
   
   // Stats usage (en attendant les stats backend complètes, on utilise les documents chargés)
