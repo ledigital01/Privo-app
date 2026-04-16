@@ -38,7 +38,7 @@ function PaymentModal({ isOpen, onClose, plan }) {
   }
 
   const METHODS = [
-    { id: 'mobile_money', label: 'Mobile Money', desc: 'Orange Money · Wave · MTN MoMo', icon: <Smartphone size={22} />, color: 'warn' },
+    { id: 'mobile_money', label: 'Mobile Money', desc: 'Orange · Wave · MTN · Moov · Airtel…', icon: <Smartphone size={22} />, color: 'warn' },
     { id: 'card', label: 'Carte Bancaire', desc: 'Visa · Mastercard · AMEX', icon: <CreditCard size={22} />, color: 'primary' },
   ]
 
@@ -157,14 +157,15 @@ function PaymentModal({ isOpen, onClose, plan }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   <div>
                     <div className="label-xs" style={{ marginBottom: 6 }}>Opérateur</div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      {['Orange Money', 'Wave', 'MTN MoMo'].map(op => (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                      {['Orange', 'Wave', 'MTN', 'Moov', 'Airtel', 'Free', 'Tmoney'].map(op => (
                         <button key={op} onClick={() => setFormData(p => ({ ...p, operator: op }))}
                           style={{
-                            flex: 1, padding: '10px 4px', borderRadius: 'var(--r-md)', border: `1.5px solid ${formData.operator === op ? 'var(--c-primary)' : 'var(--c-border)'}`,
+                            padding: '10px 4px', borderRadius: 'var(--r-md)', border: `1.5px solid ${formData.operator === op ? 'var(--c-primary)' : 'var(--c-border)'}`,
                             background: formData.operator === op ? 'var(--c-primary-soft)' : 'var(--c-surface)',
-                            color: formData.operator === op ? 'var(--c-primary)' : 'var(--c-text-muted)',
-                            fontFamily: 'Manrope', fontWeight: 600, fontSize: '0.72rem', cursor: 'pointer'
+                            color: formData.operator === op ? 'var(--c-primary)' : 'var(--c-text)',
+                            fontFamily: 'Manrope', fontWeight: 700, fontSize: '0.7rem', cursor: 'pointer',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4
                           }}>
                           {op}
                         </button>
