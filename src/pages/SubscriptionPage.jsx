@@ -462,11 +462,13 @@ export default function SubscriptionPage({ onBack }) {
 
           {/* Promo annuelle */}
           {billing === 'yearly' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'var(--c-success-soft)', borderRadius: 'var(--r-md)', marginBottom: 16 }}>
-              <Zap size={16} color="var(--c-success)" />
-              <p className="body-xs" style={{ color: 'var(--c-success)', fontWeight: 600, margin: 0 }}>
-                Offre annuelle active — Pro : +3 mois offerts · Business : économisez 57$
-              </p>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', background: 'var(--c-success-soft)', borderRadius: 99 }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--c-success)' }}>🎁 Pro — +3 mois offerts</span>
+              </div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', background: 'var(--c-primary-soft)', borderRadius: 99 }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--c-primary)' }}>💼 Business — Économisez 57$</span>
+              </div>
             </div>
           )}
 
