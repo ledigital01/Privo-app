@@ -26,7 +26,7 @@ export const AppProvider = ({ children }) => {
       // Timeout de sécurité : si Supabase ne répond pas en 5s, on continue quand même
       const profilePromise = supabase
         .from('profiles')
-        .select('first_name, last_name, initials, plan, shares_this_month')
+        .select('first_name, last_name, initials, plan, shares_this_month, wallet_balance')
         .eq('id', session.user.id)
         .single()
 
@@ -42,6 +42,7 @@ export const AppProvider = ({ children }) => {
         profileName = profile.first_name || profileName
         profileLastName = profile.last_name || profileLastName
         profileInitials = profile.initials || profileInitials
+        var walletBalance = profile.wallet_balance || 0
       }
     } catch (err) {
       // Silently fall back to metadata if profiles table is unavailable
@@ -56,6 +57,7 @@ export const AppProvider = ({ children }) => {
       initials: profileInitials,
       plan,
       sharesThisMonth,
+      walletBalance: walletBalance || 0
     })
 
     return { userId: session.user.id, plan }
@@ -350,6 +352,21 @@ export const AppProvider = ({ children }) => {
     return { error: error.message }
   }
 
+  const updateWalletBalance = async (newAmount) => {
+    if (!authUser) return { error: "Non authentifié" }
+    
+    const { error } = await supabase
+      .from('profiles')
+      .update({ wallet_balance: newAmount })
+      .eq('id', authUser.id)
+
+    if (!error) {
+      setAuthUser(prev => ({ ...prev, walletBalance: newAmount }))
+      return { success: true }
+    }
+    return { error: error.message }
+  }
+
   // ----------------------------------------------------------------
   // 8. Stats & Computed values
   // ----------------------------------------------------------------
@@ -403,6 +420,7 @@ export const AppProvider = ({ children }) => {
     canShare,
     checkFeature,
     updateUserPlan,
+    updateWalletBalance,
     hasAlerts: expiringDocs.length > 0 && planLimits.features.expiryAlerts,
     isAuthenticated: !!authUser
   }

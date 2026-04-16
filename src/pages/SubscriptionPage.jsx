@@ -10,99 +10,124 @@ import { PLANS as PLAN_DEFS } from '../utils/plans'
 import { supabase } from '../utils/supabaseClient'
 
 /* ================================================================
-   MODAL — PAYMENT METHOD SELECTION
+   MODAL — PAYMENT METHOD SELECTION (DYNAMIC)
+   Steps: method → form → processing → success | fail
    ================================================================ */
-function PaymentModal({ isOpen, onClose, plan, onSuccess, onFail }) {
-  const [step, setStep] = useState('method') // 'method' | 'processing' | 'success' | 'fail'
-  const [method, setMethod] = useState(null)
 
-  const { updateUserPlan } = useApp()
+// --- Formatage automatique du numéro de carte ---
+function formatCardNumber(val) {
+  return val.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim()
+}
+function formatExpiry(val) {
+  const d = val.replace(/\D/g, '').slice(0, 4)
+  return d.length > 2 ? d.slice(0, 2) + '/' + d.slice(2) : d
+}
+
+function PaymentModal({ isOpen, onClose, plan }) {
+  const [step, setStep] = useState('method') // method | form | processing | success | fail
+  const [method, setMethod] = useState(null)
+  const [formData, setFormData] = useState({})
+  const [errors, setErrors] = useState({})
+  const { updateUserPlan, authUser } = useApp()
 
   if (!isOpen) return null
 
-  const handlePay = async (m) => {
-    setMethod(m)
+  const handleClose = () => {
+    setStep('method'); setMethod(null); setFormData({}); setErrors({})
+    onClose()
+  }
+
+  const METHODS = [
+    { id: 'mobile_money', label: 'Mobile Money', desc: 'Orange Money · Wave · MTN MoMo', icon: <Smartphone size={22} />, color: 'warn' },
+    { id: 'card', label: 'Carte Bancaire', desc: 'Visa · Mastercard · AMEX', icon: <CreditCard size={22} />, color: 'primary' },
+    { id: 'wallet', label: 'DigiWallet', desc: `Solde : ${(authUser?.walletBalance || 0).toLocaleString('fr-FR')} FCFA`, icon: <Wallet size={22} />, color: 'success' },
+  ]
+
+  // Validation par méthode
+  const validate = () => {
+    const e = {}
+    if (method === 'mobile_money') {
+      if (!formData.operator) e.operator = 'Choisissez un opérateur.'
+      if (!formData.phone || formData.phone.replace(/\D/g,'').length < 8) e.phone = 'Numéro invalide (min 8 chiffres).'
+    }
+    if (method === 'card') {
+      if (!formData.cardName?.trim()) e.cardName = 'Nom du titulaire requis.'
+      if (!formData.cardNumber || formData.cardNumber.replace(/\s/g,'').length < 16) e.cardNumber = 'Numéro de carte à 16 chiffres requis.'
+      if (!formData.expiry || !/^\d{2}\/\d{2}$/.test(formData.expiry)) e.expiry = 'Format MM/AA requis.'
+      if (!formData.cvv || formData.cvv.length < 3) e.cvv = 'CVV à 3 ou 4 chiffres requis.'
+    }
+    if (method === 'wallet') {
+      const fcfaPrice = plan.billingCycle === 'yearly' ? PRICING_CONFIG[plan.id].yearlyFcfa : PRICING_CONFIG[plan.id].monthlyFcfa
+      if ((authUser?.walletBalance || 0) < fcfaPrice) {
+        e.wallet = 'Solde insuffisant dans votre DigiWallet.'
+      }
+    }
+    setErrors(e)
+    return Object.keys(e).length === 0
+  }
+
+  const handlePay = async () => {
+    if (!validate()) return
     setStep('processing')
     
-    // Simulate processing delay
-    await new Promise(r => setTimeout(r, 2000))
+    // Simulation du délai bancaire/réseau
+    await new Promise(r => setTimeout(r, 2500))
 
-    const ok = Math.random() > 0.05 // 95% success for better demo
-    if (ok) {
+    try {
+      // Si c'est le wallet, on débite réellement en DB
+      if (method === 'wallet') {
+        const fcfaPrice = plan.billingCycle === 'yearly' ? PRICING_CONFIG[plan.id].yearlyFcfa : PRICING_CONFIG[plan.id].monthlyFcfa
+        const newBalance = (authUser?.walletBalance || 0) - fcfaPrice
+        const walletResult = await updateWalletBalance(newBalance)
+        if (!walletResult.success) throw new Error("Erreur de débit portefeuille")
+      }
+
+      // Mise à jour du plan
       const result = await updateUserPlan(plan.id)
       if (result.success) {
         setStep('success')
       } else {
         setStep('fail')
       }
-    } else {
+    } catch (err) {
+      console.error("Payment error:", err)
       setStep('fail')
     }
   }
 
-  const handleClose = () => {
-    setStep('method')
-    setMethod(null)
-    onClose()
-  }
-
-  const METHODS = [
-    {
-      id: 'mobile_money',
-      label: 'Mobile Money',
-      desc: 'Orange Money, Wave, MTN...',
-      icon: <Smartphone size={24} />,
-      color: 'warn',
-    },
-    {
-      id: 'card',
-      label: 'Carte Bancaire',
-      desc: 'Visa, Mastercard, AMEX',
-      icon: <CreditCard size={24} />,
-      color: 'primary',
-    },
-    {
-      id: 'wallet',
-      label: 'DigiWallet',
-      desc: 'Solde disponible : 12 500 FCFA',
-      icon: <Wallet size={24} />,
-      color: 'success',
-    },
-  ]
+  const fieldStyle = (key) => ({
+    border: `1.5px solid ${errors[key] ? 'var(--c-danger)' : 'var(--c-border)'}`,
+    borderRadius: 'var(--r-md)', padding: '12px 14px', width: '100%',
+    fontFamily: 'Manrope', fontSize: '0.9rem', background: 'var(--c-surface)',
+    color: 'var(--c-text)', outline: 'none', boxSizing: 'border-box'
+  })
 
   return (
     <div className="modal-overlay" onClick={handleClose}>
-      <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ maxWidth: 430, margin: '0 auto' }}>
+      <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ maxWidth: 440, margin: '0 auto' }}>
         <div className="modal-handle" />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
-        {/* STEP: METHOD SELECTION */}
+        {/* ── ÉTAPE 1 : CHOIX DE MÉTHODE ── */}
         {step === 'method' && (
           <>
             <div className="modal-header">
               <div>
-                <h2 className="title-md">Choisir le paiement</h2>
-                <p className="body-sm" style={{ marginTop: 2 }}>Plan {plan?.name} — <strong>{plan?.price}</strong></p>
+                <h2 className="title-md">Finaliser l'abonnement</h2>
+                <p className="body-sm" style={{ marginTop: 2, color: 'var(--c-text-muted)' }}>
+                  Plan <strong style={{ color: 'var(--c-text)' }}>{plan?.name}</strong> — <strong style={{ color: 'var(--c-primary)' }}>{plan?.displayPrice}</strong>
+                </p>
               </div>
               <button className="modal-close-btn" onClick={handleClose}><X size={18} /></button>
             </div>
-
             <div className="modal-body">
-              {/* Security badge */}
-              <div style={{
-                display: 'flex', alignItems:'center', gap: 10,
-                background: 'var(--c-primary-soft)', borderRadius: 'var(--r-md)',
-                padding: '12px 16px', marginBottom: 4
-              }}>
-                <Lock size={18} color="var(--c-primary)" />
-                <p className="body-sm" style={{ color: 'var(--c-primary)', margin: 0 }}>
-                  Paiement 100% sécurisé · Chiffré SSL
-                </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--c-primary-soft)', borderRadius: 'var(--r-md)', padding: '10px 14px', marginBottom: 8 }}>
+                <Lock size={16} color="var(--c-primary)" />
+                <p className="body-xs" style={{ color: 'var(--c-primary)', margin: 0, fontWeight: 600 }}>Paiement 100% sécurisé · SSL · AES-256</p>
               </div>
-
-              <div className="label-xs" style={{ paddingLeft: 4, marginTop: 8 }}>Méthode de paiement</div>
-
+              <div className="label-xs" style={{ paddingLeft: 4, marginTop: 12, marginBottom: 4 }}>Choisir un moyen de paiement</div>
               {METHODS.map(m => (
-                <button key={m.id} className="action-row" onClick={() => handlePay(m.id)}>
+                <button key={m.id} className="action-row" onClick={() => { setMethod(m.id); setStep('form') }}>
                   <div className={`icon-wrap md ${m.color}`}>{m.icon}</div>
                   <div style={{ flex: 1, textAlign: 'left' }}>
                     <div className="action-text">{m.label}</div>
@@ -115,63 +140,183 @@ function PaymentModal({ isOpen, onClose, plan, onSuccess, onFail }) {
           </>
         )}
 
-        {/* STEP: PROCESSING */}
+        {/* ── ÉTAPE 2 : FORMULAIRE ── */}
+        {step === 'form' && (
+          <>
+            <div className="modal-header">
+              <button className="notif-btn" onClick={() => { setStep('method'); setErrors({}) }} style={{ width: 36, height: 36 }}>
+                <ChevronLeft size={20} />
+              </button>
+              <h2 className="title-md" style={{ flex: 1, textAlign: 'center' }}>
+                {method === 'mobile_money' ? 'Mobile Money' : method === 'card' ? 'Carte Bancaire' : 'DigiWallet'}
+              </h2>
+              <button className="modal-close-btn" onClick={handleClose}><X size={18} /></button>
+            </div>
+
+            <div className="modal-body">
+              {/* Récapitulatif */}
+              <div style={{ background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)', padding: '12px 16px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <p className="label-xs" style={{ color: 'var(--c-text-muted)', margin: 0 }}>À payer</p>
+                  <p className="title-sm" style={{ margin: 0, color: 'var(--c-primary)' }}>
+                    {plan?.displayPrice}
+                    {method === 'wallet' && <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--c-text-muted)', marginLeft: 6 }}>
+                      ({(plan.billingCycle === 'yearly' ? PRICING_CONFIG[plan.id].yearlyFcfa : PRICING_CONFIG[plan.id].monthlyFcfa).toLocaleString('fr-FR')} FCFA)
+                    </span>}
+                  </p>
+                </div>
+                <span className="badge primary" style={{ background: 'var(--c-primary-soft)', color: 'var(--c-primary)' }}>Plan {plan?.name}</span>
+              </div>
+
+              {/* Erreurs globales (ex: wallet insuffisant) */}
+              {errors.wallet && (
+                <div style={{ background: 'var(--c-danger-soft)', color: 'var(--c-danger)', padding: '10px 14px', borderRadius: 'var(--r-md)', marginBottom: 16, fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <XCircle size={16} /> {errors.wallet}
+                </div>
+              )}
+
+              {/* MOBILE MONEY */}
+              {method === 'mobile_money' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div>
+                    <div className="label-xs" style={{ marginBottom: 6 }}>Opérateur</div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {['Orange Money', 'Wave', 'MTN MoMo'].map(op => (
+                        <button key={op} onClick={() => setFormData(p => ({ ...p, operator: op }))}
+                          style={{
+                            flex: 1, padding: '10px 4px', borderRadius: 'var(--r-md)', border: `1.5px solid ${formData.operator === op ? 'var(--c-primary)' : 'var(--c-border)'}`,
+                            background: formData.operator === op ? 'var(--c-primary-soft)' : 'var(--c-surface)',
+                            color: formData.operator === op ? 'var(--c-primary)' : 'var(--c-text-muted)',
+                            fontFamily: 'Manrope', fontWeight: 600, fontSize: '0.72rem', cursor: 'pointer'
+                          }}>
+                          {op}
+                        </button>
+                      ))}
+                    </div>
+                    {errors.operator && <p style={{ color: 'var(--c-danger)', fontSize: '0.75rem', marginTop: 4 }}>{errors.operator}</p>}
+                  </div>
+                  <div>
+                    <div className="label-xs" style={{ marginBottom: 6 }}>Numéro de téléphone</div>
+                    <input type="tel" placeholder="ex : +221 77 000 00 00" style={fieldStyle('phone')}
+                      value={formData.phone || ''} onChange={e => setFormData(p => ({ ...p, phone: e.target.value }))} />
+                    {errors.phone && <p style={{ color: 'var(--c-danger)', fontSize: '0.75rem', marginTop: 4 }}>{errors.phone}</p>}
+                  </div>
+                  <p className="body-xs" style={{ color: 'var(--c-text-muted)', textAlign: 'center' }}>
+                    Vous recevrez une notification de confirmation sur ce numéro.
+                  </p>
+                </div>
+              )}
+
+              {/* CARTE BANCAIRE */}
+              {method === 'card' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div>
+                    <div className="label-xs" style={{ marginBottom: 6 }}>Nom du titulaire</div>
+                    <input type="text" placeholder="NOM Prénom" style={fieldStyle('cardName')}
+                      value={formData.cardName || ''} onChange={e => setFormData(p => ({ ...p, cardName: e.target.value.toUpperCase() }))} />
+                    {errors.cardName && <p style={{ color: 'var(--c-danger)', fontSize: '0.75rem', marginTop: 4 }}>{errors.cardName}</p>}
+                  </div>
+                  <div>
+                    <div className="label-xs" style={{ marginBottom: 6 }}>Numéro de carte</div>
+                    <input type="text" placeholder="0000 0000 0000 0000" style={fieldStyle('cardNumber')} maxLength={19}
+                      value={formData.cardNumber || ''} onChange={e => setFormData(p => ({ ...p, cardNumber: formatCardNumber(e.target.value) }))} />
+                    {errors.cardNumber && <p style={{ color: 'var(--c-danger)', fontSize: '0.75rem', marginTop: 4 }}>{errors.cardNumber}</p>}
+                  </div>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <div style={{ flex: 1 }}>
+                      <div className="label-xs" style={{ marginBottom: 6 }}>Expiration</div>
+                      <input type="text" placeholder="MM/AA" style={fieldStyle('expiry')} maxLength={5}
+                        value={formData.expiry || ''} onChange={e => setFormData(p => ({ ...p, expiry: formatExpiry(e.target.value) }))} />
+                      {errors.expiry && <p style={{ color: 'var(--c-danger)', fontSize: '0.75rem', marginTop: 4 }}>{errors.expiry}</p>}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div className="label-xs" style={{ marginBottom: 6 }}>CVV</div>
+                      <input type="password" placeholder="•••" style={fieldStyle('cvv')} maxLength={4}
+                        value={formData.cvv || ''} onChange={e => setFormData(p => ({ ...p, cvv: e.target.value.replace(/\D/g, '') }))} />
+                      {errors.cvv && <p style={{ color: 'var(--c-danger)', fontSize: '0.75rem', marginTop: 4 }}>{errors.cvv}</p>}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'center', opacity: 0.5 }}>
+                    {['VISA', 'MC', 'AMEX'].map(b => (
+                      <span key={b} style={{ fontSize: '0.65rem', fontWeight: 800, border: '1px solid var(--c-border)', padding: '3px 7px', borderRadius: 4 }}>{b}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* DIGIWALLET */}
+              {method === 'wallet' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center', textAlign: 'center' }}>
+                  <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--c-success-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Wallet size={28} color="var(--c-success)" />
+                  </div>
+                  <div>
+                    <p className="body-sm" style={{ color: 'var(--c-text-muted)' }}>Solde DigiWallet disponible</p>
+                    <p className="title-md" style={{ color: 'var(--c-success)', margin: '4px 0' }}>{(authUser?.walletBalance || 0).toLocaleString('fr-FR')} FCFA</p>
+                  </div>
+                  <div style={{ width: '100%', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)', padding: '12px 16px', textAlign: 'left' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span className="body-xs" style={{ color: 'var(--c-text-muted)' }}>Plan {plan?.name}</span>
+                      <span className="body-xs" style={{ fontWeight: 700 }}>{plan?.displayPrice}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+                      <span className="body-xs" style={{ color: 'var(--c-text-muted)' }}>Solde après paiement</span>
+                      <span className="body-xs" style={{ fontWeight: 700, color: 'var(--c-success)' }}>
+                        {~~((authUser?.walletBalance || 0) - (plan.billingCycle === 'yearly' ? PRICING_CONFIG[plan.id].yearlyFcfa : PRICING_CONFIG[plan.id].monthlyFcfa)).toLocaleString('fr-FR')} FCFA
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <button className="btn-primary" style={{ width: '100%', marginTop: 24 }} onClick={handlePay}>
+                <Lock size={16} /> Confirmer et payer
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* ── ÉTAPE 3 : TRAITEMENT ── */}
         {step === 'processing' && (
-          <div className="modal-body" style={{ paddingTop: 40, paddingBottom: 60, alignItems: 'center', textAlign: 'center', gap: 20 }}>
-            <div style={{
-              width: 72, height: 72, borderRadius: '50%',
-              border: '4px solid var(--c-primary-soft)',
-              borderTopColor: 'var(--c-primary)',
-              animation: 'spin 0.9s linear infinite',
-              margin: '0 auto'
-            }} />
+          <div className="modal-body" style={{ paddingTop: 60, paddingBottom: 70, alignItems: 'center', textAlign: 'center', gap: 20 }}>
+            <div style={{ width: 72, height: 72, borderRadius: '50%', border: '4px solid var(--c-primary-soft)', borderTopColor: 'var(--c-primary)', animation: 'spin 0.9s linear infinite', margin: '0 auto' }} />
             <div>
               <p className="title-sm">Traitement en cours…</p>
-              <p className="body-sm">Veuillez patienter quelques secondes.</p>
+              <p className="body-sm" style={{ color: 'var(--c-text-muted)' }}>Transaction sécurisée. Veuillez patienter.</p>
             </div>
-            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           </div>
         )}
 
-        {/* STEP: SUCCESS */}
+        {/* ── SUCCÈS ── */}
         {step === 'success' && (
-          <div className="modal-body" style={{ paddingTop: 40, paddingBottom: 60, alignItems: 'center', textAlign: 'center', gap: 20 }}>
-            <div style={{
-              width: 80, height: 80, borderRadius: '50%',
-              background: 'var(--c-success-soft)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto'
-            }}>
+          <div className="modal-body" style={{ paddingTop: 50, paddingBottom: 60, alignItems: 'center', textAlign: 'center', gap: 20 }}>
+            <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'var(--c-success-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
               <CheckCircle size={44} color="var(--c-success)" />
             </div>
             <div>
-              <p className="title-sm" style={{ fontSize: '1.2rem' }}>Paiement réussi ! 🎉</p>
-              <p className="body-sm" style={{ marginTop: 8 }}>
-                Votre abonnement <strong>{plan?.name}</strong> est maintenant actif.
+              <p className="title-sm" style={{ fontSize: '1.2rem' }}>Paiement validé ! 🎉</p>
+              <p className="body-sm" style={{ marginTop: 8, color: 'var(--c-text-muted)' }}>
+                Votre plan <strong style={{ color: 'var(--c-text)' }}>{plan?.name}</strong> est maintenant actif.<br />
+                Un reçu vous a été envoyé par email.
               </p>
             </div>
-            <button className="btn-primary" onClick={handleClose}><Check size={18} /> Continuer</button>
+            <button className="btn-primary" onClick={handleClose}><Check size={18} /> Accéder à mon nouveau plan</button>
           </div>
         )}
 
-        {/* STEP: FAIL */}
+        {/* ── ÉCHEC ── */}
         {step === 'fail' && (
-          <div className="modal-body" style={{ paddingTop: 40, paddingBottom: 60, alignItems: 'center', textAlign: 'center', gap: 20 }}>
-            <div style={{
-              width: 80, height: 80, borderRadius: '50%',
-              background: 'var(--c-danger-soft)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto'
-            }}>
+          <div className="modal-body" style={{ paddingTop: 50, paddingBottom: 60, alignItems: 'center', textAlign: 'center', gap: 20 }}>
+            <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'var(--c-danger-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
               <XCircle size={44} color="var(--c-danger)" />
             </div>
             <div>
-              <p className="title-sm" style={{ fontSize: '1.2rem' }}>Paiement échoué</p>
-              <p className="body-sm" style={{ marginTop: 8 }}>
-                Une erreur est survenue. Vérifiez vos informations et réessayez.
+              <p className="title-sm" style={{ fontSize: '1.2rem' }}>Paiement refusé</p>
+              <p className="body-sm" style={{ marginTop: 8, color: 'var(--c-text-muted)' }}>
+                Vérifiez vos informations de paiement et réessayez.
               </p>
             </div>
-            <button className="btn-primary" onClick={() => setStep('method')}>Réessayer</button>
+            <button className="btn-primary" onClick={() => setStep('form')}>Réessayer</button>
             <button className="btn-secondary" onClick={handleClose}>Annuler</button>
           </div>
         )}
@@ -188,12 +333,16 @@ const PRICING_CONFIG = {
   pro: {
     monthly: 3.5,
     yearly: 29,
+    monthlyFcfa: 2100,
+    yearlyFcfa: 17400,
     yearlySavings: Math.round(3.5 * 12 - 29), // ~13$
     yearlyBadge: '+3 mois offerts',
   },
   business: {
     monthly: 13,
     yearly: 99,
+    monthlyFcfa: 7800,
+    yearlyFcfa: 59400,
     yearlySavings: Math.round(13 * 12 - 99), // ~57$
     yearlyBadge: 'Économisez 57$',
   }
@@ -713,7 +862,14 @@ export default function SubscriptionPage({ onBack }) {
                 {/* CTA */}
                 {plan.id !== currentPlanId && (
                   <button
-                    onClick={() => setSelectedPlan(plan)}
+                    onClick={() => {
+                      const pricing = getPlanPrice(plan.id, billing)
+                      setSelectedPlan({
+                        ...plan,
+                        displayPrice: pricing.label,
+                        billingCycle: billing
+                      })
+                    }}
                     style={{
                       width: '100%', padding: '13px 0',
                       borderRadius: 'var(--r-lg)',
