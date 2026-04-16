@@ -166,16 +166,34 @@ function PaymentModal({ isOpen, onClose, plan }) {
         if (data.status === "successful") {
           setStep('processing');
           try {
-            // Ici on appellera la vérification backend plus tard
-            // Pour l'instant, on met à jour le plan dans le store local
-            const success = await updateUserPlan(plan.id.toLowerCase());
-            if (success) {
+            // --- VÉRIFICATION BACKEND RÉELLE ---
+            const verifyRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-payment`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+              },
+              body: JSON.stringify({
+                transaction_id: data.transaction_id,
+                tx_ref: data.tx_ref,
+                user_id: authUser?.id,
+                plan_id: plan.id.toLowerCase(),
+                billing_cycle: plan.billingCycle
+              })
+            });
+
+            const verifyResult = await verifyRes.json();
+
+            if (verifyResult.success) {
+              // Re-charger les données utilisateur pour refléter le nouveau plan
+              await updateUserPlan(plan.id.toLowerCase()); 
               setStep('success');
             } else {
+              console.error("Verification failed:", verifyResult.error);
               setStep('fail');
             }
           } catch (err) {
-            console.error(err);
+            console.error("Verification error:", err);
             setStep('fail');
           }
         } else {
