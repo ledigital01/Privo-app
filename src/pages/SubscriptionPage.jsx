@@ -181,19 +181,27 @@ function PaymentModal({ isOpen, onClose, plan, onSuccess, onFail }) {
 
 /* ================================================================
    PAGE — SUBSCRIPTION / PRICING
-   Pricing config — modifiez uniquement ces constantes
+   PRICING CONFIG — Modifier ici pour changer les tarifs
    ================================================================ */
-const PRICING = {
-  pro:      { monthly: 3.5,  annual: 29  },
-  business: { monthly: 13,   annual: 99  },
+const PRICING_CONFIG = {
+  pro: {
+    monthly: 3.5,
+    yearly: 29,
+    yearlySavings: Math.round(3.5 * 12 - 29), // ~13$
+    yearlyBadge: '+3 mois offerts',
+  },
+  business: {
+    monthly: 13,
+    yearly: 99,
+    yearlySavings: Math.round(13 * 12 - 99), // ~57$
+    yearlyBadge: 'Économisez 57$',
+  }
 }
 
-const buildPlans = (cycle) => [
+const PLANS = [
   {
     id: 'free',
     name: 'Gratuit',
-    price: '$0',
-    period: '/mois',
     icon: <Shield size={28} />,
     color: 'neutral',
     features: [
@@ -202,21 +210,21 @@ const buildPlans = (cycle) => [
       'Stockage 100 Mo',
       'Partage limité (3/mois)',
     ],
-    missing: ['IA illimitée', 'Documents illimités', 'Accès prioritaire'],
+    missing: [
+      'IA illimitée',
+      'Documents illimités',
+      'Accès prioritaire',
+    ],
   },
   {
     id: 'pro',
     name: 'Pro',
-    price: cycle === 'annual' ? `$${PRICING.pro.annual}` : `$${PRICING.pro.monthly}`,
-    period: cycle === 'annual' ? '/an' : '/mois',
-    promo: cycle === 'annual' ? '+3 mois offerts 🎁' : null,
-    saving: cycle === 'annual' ? `Économisez $${((PRICING.pro.monthly * 12) - PRICING.pro.annual).toFixed(0)}` : null,
     icon: <Star size={28} />,
     color: 'primary',
     recommended: true,
     features: [
       '100 documents',
-      'Scan IA avancé (Claude)',
+      'Scan IA avancé',
       'Stockage 5 Go',
       'Partage sécurisé illimité',
       "Alertes d'expiration automatiques",
@@ -227,10 +235,6 @@ const buildPlans = (cycle) => [
   {
     id: 'business',
     name: 'Business',
-    price: cycle === 'annual' ? `$${PRICING.business.annual}` : `$${PRICING.business.monthly}`,
-    period: cycle === 'annual' ? '/an' : '/mois',
-    promo: cycle === 'annual' ? `Économisez $${((PRICING.business.monthly * 12) - PRICING.business.annual).toFixed(0)}/an 💰` : null,
-    saving: cycle === 'annual' ? `vs $${PRICING.business.monthly * 12}/an en mensuel` : null,
     icon: <Crown size={28} />,
     color: 'warn',
     features: [
@@ -247,18 +251,35 @@ const buildPlans = (cycle) => [
 ]
 
 const FAQS = [
-  { q: 'Puis-je résilier à tout moment ?', a: 'Oui, sans frais ni engagement. Vous gardez l\'accès jusqu\'à la fin de la période payée.' },
+  { q: 'Puis-je résilier à tout moment ?', a: "Oui, sans frais ni engagement. Vous gardez l'accès jusqu'à la fin de la période payée." },
   { q: 'Mes données sont-elles sécurisées ?', a: 'Toutes vos données sont chiffrées AES-256 et hébergées en Europe (RGPD compliant).' },
   { q: 'Quels moyens de paiement sont acceptés ?', a: 'Mobile Money (Orange, Wave, MTN), cartes bancaires Visa/Mastercard, et DigiWallet.' },
 ]
+
+// Helper — formater le prix affiché selon la période
+function getPlanPrice(planId, billing) {
+  if (planId === 'free') return { label: 'Gratuit', sub: '' }
+  const cfg = PRICING_CONFIG[planId]
+  if (!cfg) return { label: 'N/A', sub: '' }
+  if (billing === 'yearly') {
+    return {
+      label: `${cfg.yearly}$ / an`,
+      sub: `soit ${(cfg.yearly / 12).toFixed(2)}$ / mois`,
+      badge: cfg.yearlyBadge,
+      savings: `Économisez ${cfg.yearlySavings}$`,
+    }
+  }
+  return {
+    label: `${cfg.monthly}$ / mois`,
+    sub: '',
+  }
+}
 
 export default function SubscriptionPage({ onBack }) {
   const { authUser, documents, stats } = useApp()
   const [selectedPlan, setSelectedPlan] = useState(null)
   const [openFaq, setOpenFaq] = useState(null)
-  const [billingCycle, setBillingCycle] = useState('monthly') // 'monthly' | 'annual'
-
-  const PLANS = buildPlans(billingCycle)
+  const [billing, setBilling] = useState('monthly') // 'monthly' | 'yearly'
 
   // Normaliser l'ID du plan : gérer les alias et la casse
   const rawPlanId = (authUser?.plan || 'free').toLowerCase()
@@ -284,6 +305,12 @@ export default function SubscriptionPage({ onBack }) {
   return (
     <>
       <div className="page-enter">
+        {/* DEBUG TEMPORAIRE — à retirer après vérification */}
+        {process.env.NODE_ENV !== 'production' && (
+          <div style={{ background: '#fef9c3', padding: '4px 12px', fontSize: '0.7rem', fontFamily: 'monospace' }}>
+            Plan DB brut: <strong>{authUser?.plan || 'non défini'}</strong> → Normalisé: <strong>{currentPlanId}</strong>
+          </div>
+        )}
         {/* Top bar */}
         <div className="top-bar">
           <button className="notif-btn" onClick={onBack} style={{ width: 40, height: 40 }}>
@@ -397,51 +424,51 @@ export default function SubscriptionPage({ onBack }) {
             </div>
           )}
 
-          {/* Plans */}
-          <div className="section-header" style={{ marginTop: 24 }}>
-            <h2>Choisir un plan</h2>
-          </div>
+          {/* Plans + Toggle */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 24, marginBottom: 16 }}>
+            <h2 style={{ fontFamily: 'Manrope', fontWeight: 800, fontSize: '1.1rem' }}>Choisir un plan</h2>
 
-          {/* Toggle Mensuel / Annuel */}
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
-            <div style={{
-              display: 'inline-flex', background: 'var(--c-surface-2)',
-              borderRadius: 999, padding: 4, gap: 4
-            }}>
+            {/* Billing Toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', background: 'var(--c-surface-2)', borderRadius: 999, padding: 3, gap: 2 }}>
               <button
-                onClick={() => setBillingCycle('monthly')}
+                onClick={() => setBilling('monthly')}
                 style={{
-                  padding: '8px 20px', borderRadius: 999, border: 'none', cursor: 'pointer',
-                  fontFamily: 'Manrope', fontWeight: 700, fontSize: '0.85rem',
-                  background: billingCycle === 'monthly' ? 'white' : 'transparent',
-                  color: billingCycle === 'monthly' ? 'var(--c-primary)' : 'var(--c-text-muted)',
-                  boxShadow: billingCycle === 'monthly' ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
+                  padding: '5px 12px', borderRadius: 999, border: 'none', cursor: 'pointer',
+                  fontFamily: 'Manrope', fontWeight: 600, fontSize: '0.75rem',
+                  background: billing === 'monthly' ? 'var(--c-surface)' : 'transparent',
+                  color: billing === 'monthly' ? 'var(--c-text)' : 'var(--c-text-muted)',
+                  boxShadow: billing === 'monthly' ? 'var(--shadow-xs)' : 'none',
+                  transition: 'all 0.2s'
+                }}
+              >Mensuel</button>
+              <button
+                onClick={() => setBilling('yearly')}
+                style={{
+                  padding: '5px 12px', borderRadius: 999, border: 'none', cursor: 'pointer',
+                  fontFamily: 'Manrope', fontWeight: 600, fontSize: '0.75rem',
+                  background: billing === 'yearly' ? 'var(--c-primary)' : 'transparent',
+                  color: billing === 'yearly' ? 'white' : 'var(--c-text-muted)',
+                  boxShadow: billing === 'yearly' ? '0 2px 8px rgba(0,61,155,0.3)' : 'none',
                   transition: 'all 0.2s'
                 }}
               >
-                Mensuel
-              </button>
-              <button
-                onClick={() => setBillingCycle('annual')}
-                style={{
-                  padding: '8px 20px', borderRadius: 999, border: 'none', cursor: 'pointer',
-                  fontFamily: 'Manrope', fontWeight: 700, fontSize: '0.85rem',
-                  background: billingCycle === 'annual' ? 'var(--c-primary)' : 'transparent',
-                  color: billingCycle === 'annual' ? 'white' : 'var(--c-text-muted)',
-                  boxShadow: billingCycle === 'annual' ? '0 2px 8px rgba(0,61,155,0.3)' : 'none',
-                  transition: 'all 0.2s',
-                  display: 'flex', alignItems: 'center', gap: 6
-                }}
-              >
                 Annuel
-                <span style={{
-                  background: billingCycle === 'annual' ? 'rgba(255,255,255,0.25)' : 'var(--c-success)',
-                  color: 'white', fontSize: '0.65rem', fontWeight: 800,
-                  padding: '2px 7px', borderRadius: 999
-                }}>-20%</span>
+                {billing !== 'yearly' && (
+                  <span style={{ marginLeft: 4, background: 'var(--c-success)', color: 'white', fontSize: '0.6rem', fontWeight: 700, padding: '1px 5px', borderRadius: 99 }}>-25%</span>
+                )}
               </button>
             </div>
           </div>
+
+          {/* Promo annuelle */}
+          {billing === 'yearly' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'var(--c-success-soft)', borderRadius: 'var(--r-md)', marginBottom: 16 }}>
+              <Zap size={16} color="var(--c-success)" />
+              <p className="body-xs" style={{ color: 'var(--c-success)', fontWeight: 600, margin: 0 }}>
+                Offre annuelle active — Pro : +3 mois offerts · Business : économisez 57$
+              </p>
+            </div>
+          )}
 
           <div className="space-y-3" style={{ marginBottom: 32 }}>
             {PLANS.map(plan => (
@@ -476,7 +503,7 @@ export default function SubscriptionPage({ onBack }) {
                 )}
 
                 {/* Plan header */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 18 }}>
                   <div className={`icon-wrap md ${plan.recommended ? '' : plan.color}`}
                     style={plan.recommended ? {
                       width: 52, height: 52, borderRadius: 'var(--r-md)',
@@ -485,48 +512,42 @@ export default function SubscriptionPage({ onBack }) {
                     } : {}}>
                     {plan.icon}
                   </div>
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <div style={{
                       fontFamily: 'Manrope', fontWeight: 800, fontSize: '1.1rem',
                       color: plan.recommended ? 'white' : 'var(--c-text)'
                     }}>
                       {plan.name}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, flexWrap: 'wrap' }}>
-                      <span style={{
-                        fontFamily: 'Manrope', fontWeight: 800, fontSize: '1.5rem',
-                        color: plan.recommended ? 'white' : 'var(--c-text)'
-                      }}>
-                        {plan.price}
-                      </span>
-                      <span style={{
-                        fontSize: '0.8rem',
-                        color: plan.recommended ? 'rgba(255,255,255,0.65)' : 'var(--c-text-muted)'
-                      }}>
-                        {plan.period}
-                      </span>
-                    </div>
-                    {/* Badge promo */}
-                    {plan.promo && (
-                      <div style={{ marginTop: 4 }}>
-                        <span style={{
-                          background: plan.recommended ? 'rgba(255,255,255,0.25)' : '#fef3c7',
-                          color: plan.recommended ? 'white' : '#92400e',
-                          fontSize: '0.7rem', fontWeight: 700, padding: '3px 8px', borderRadius: 999
-                        }}>
-                          {plan.promo}
-                        </span>
-                      </div>
-                    )}
-                    {/* Économie */}
-                    {plan.saving && (
-                      <p style={{
-                        fontSize: '0.68rem', marginTop: 2,
-                        color: plan.recommended ? 'rgba(255,255,255,0.6)' : 'var(--c-text-muted)'
-                      }}>
-                        {plan.saving}
-                      </p>
-                    )}
+                    {(() => {
+                      const pricing = getPlanPrice(plan.id, billing)
+                      return (
+                        <>
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 2 }}>
+                            <span style={{
+                              fontFamily: 'Manrope', fontWeight: 800, fontSize: '1.4rem',
+                              color: plan.recommended ? 'white' : 'var(--c-text)'
+                            }}>
+                              {pricing.label}
+                            </span>
+                          </div>
+                          {pricing.sub && (
+                            <p style={{ fontSize: '0.72rem', color: plan.recommended ? 'rgba(255,255,255,0.7)' : 'var(--c-text-muted)', margin: 0 }}>
+                              {pricing.sub}
+                            </p>
+                          )}
+                          {billing === 'yearly' && pricing.badge && (
+                            <div style={{ marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 4,
+                              background: plan.recommended ? 'rgba(111,251,190,0.25)' : 'var(--c-success-soft)',
+                              color: plan.recommended ? '#6ffbbe' : 'var(--c-success)',
+                              padding: '3px 8px', borderRadius: 99, fontSize: '0.7rem', fontWeight: 700
+                            }}>
+                              🎁 {pricing.badge}
+                            </div>
+                          )}
+                        </>
+                      )
+                    })()}
                   </div>
                 </div>
 
