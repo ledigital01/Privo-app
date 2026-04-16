@@ -385,6 +385,7 @@ export default function SubscriptionPage({ onBack }) {
   const [selectedPlan, setSelectedPlan] = useState(null)
   const [openFaq, setOpenFaq] = useState(null)
   const [billing, setBilling] = useState('monthly') // 'monthly' | 'yearly'
+  const currentPlanId = authUser?.plan || 'free'
 
   // --- TEAM MANAGEMENT STATE ---
   const [inviteEmail, setInviteEmail] = useState('')
