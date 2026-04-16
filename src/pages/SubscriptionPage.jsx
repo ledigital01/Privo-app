@@ -23,6 +23,76 @@ function formatExpiry(val) {
   return d.length > 2 ? d.slice(0, 2) + '/' + d.slice(2) : d
 }
 
+const OPERATOR_CONFIG = {
+  Orange: {
+    color: '#FF6600',
+    countries: [
+      { id: 'sn', name: 'Sénégal', flag: '🇸🇳', prefix: '+221' },
+      { id: 'ci', name: "Côte d'Ivoire", flag: '🇨🇮', prefix: '+225' },
+      { id: 'ml', name: 'Mali', flag: '🇲🇱', prefix: '+223' },
+      { id: 'gn', name: 'Guinée', flag: '🇬🇳', prefix: '+224' },
+      { id: 'cm', name: 'Cameroun', flag: '🇨🇲', prefix: '+237' },
+      { id: 'bf', name: 'Burkina Faso', flag: '🇧🇫', prefix: '+226' },
+      { id: 'ne', name: 'Niger', flag: '🇳🇪', prefix: '+227' },
+    ]
+  },
+  Wave: {
+    color: '#1da1f2',
+    countries: [
+      { id: 'sn', name: 'Sénégal', flag: '🇸🇳', prefix: '+221' },
+      { id: 'ci', name: "Côte d'Ivoire", flag: '🇨🇮', prefix: '+225' },
+      { id: 'ml', name: 'Mali', flag: '🇲🇱', prefix: '+223' },
+      { id: 'bf', name: 'Burkina Faso', flag: '🇧🇫', prefix: '+226' },
+      { id: 'gm', name: 'Gambie', flag: '🇬🇲', prefix: '+220' },
+    ]
+  },
+  MTN: {
+    color: '#FFCC00',
+    countries: [
+      { id: 'ci', name: "Côte d'Ivoire", flag: '🇨🇮', prefix: '+225' },
+      { id: 'bj', name: 'Bénin', flag: '🇧🇯', prefix: '+229' },
+      { id: 'cm', name: 'Cameroun', flag: '🇨🇲', prefix: '+237' },
+      { id: 'cg', name: 'Congo', flag: '🇨🇬', prefix: '+242' },
+      { id: 'gh', name: 'Ghana', flag: '🇬🇭', prefix: '+233' },
+      { id: 'ng', name: 'Nigeria', flag: '🇳🇬', prefix: '+234' },
+    ]
+  },
+  Moov: {
+    color: '#0066CC',
+    countries: [
+      { id: 'ci', name: "Côte d'Ivoire", flag: '🇨🇮', prefix: '+225' },
+      { id: 'bj', name: 'Bénin', flag: '🇧🇯', prefix: '+229' },
+      { id: 'tg', name: 'Togo', flag: '🇹🇬', prefix: '+228' },
+      { id: 'bf', name: 'Burkina Faso', flag: '🇧🇫', prefix: '+226' },
+      { id: 'ne', name: 'Niger', flag: '🇳🇪', prefix: '+227' },
+      { id: 'gab', name: 'Gabon', flag: '🇬🇦', prefix: '+241' },
+    ]
+  },
+  Airtel: {
+    color: '#E30613',
+    countries: [
+      { id: 'gab', name: 'Gabon', flag: '🇬🇦', prefix: '+241' },
+      { id: 'cg', name: 'Congo', flag: '🇨🇬', prefix: '+242' },
+      { id: 'rdc', name: 'RD Congo', flag: '🇨🇩', prefix: '+243' },
+      { id: 'td', name: 'Tchad', flag: '🇹🇩', prefix: '+235' },
+      { id: 'ne', name: 'Niger', flag: '🇳🇪', prefix: '+227' },
+      { id: 'mg', name: 'Madagascar', flag: '🇲🇬', prefix: '+261' },
+    ]
+  },
+  Free: {
+    color: '#E1000F',
+    countries: [
+      { id: 'sn', name: 'Sénégal', flag: '🇸🇳', prefix: '+221' },
+    ]
+  },
+  Tmoney: {
+    color: '#F4BA1B',
+    countries: [
+      { id: 'tg', name: 'Togo', flag: '🇹🇬', prefix: '+228' },
+    ]
+  }
+}
+
 function PaymentModal({ isOpen, onClose, plan }) {
   const [step, setStep] = useState('method') // method | form | processing | success | fail
   const [method, setMethod] = useState(null)
@@ -152,35 +222,106 @@ function PaymentModal({ isOpen, onClose, plan }) {
 
 
 
-              {/* MOBILE MONEY */}
+              {/* MOBILE MONEY PRO FLOW */}
               {method === 'mobile_money' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  
+                  {/* 1. Opérateur */}
                   <div>
-                    <div className="label-xs" style={{ marginBottom: 6 }}>Opérateur</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                      {['Orange', 'Wave', 'MTN', 'Moov', 'Airtel', 'Free', 'Tmoney'].map(op => (
-                        <button key={op} onClick={() => setFormData(p => ({ ...p, operator: op }))}
-                          style={{
-                            padding: '10px 4px', borderRadius: 'var(--r-md)', border: `1.5px solid ${formData.operator === op ? 'var(--c-primary)' : 'var(--c-border)'}`,
-                            background: formData.operator === op ? 'var(--c-primary-soft)' : 'var(--c-surface)',
-                            color: formData.operator === op ? 'var(--c-primary)' : 'var(--c-text)',
-                            fontFamily: 'Manrope', fontWeight: 700, fontSize: '0.7rem', cursor: 'pointer',
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4
-                          }}>
-                          {op}
-                        </button>
-                      ))}
+                    <div className="label-xs" style={{ marginBottom: 6, display: 'flex', justifyContent: 'space-between' }}>
+                      <span>1. Choisir l'opérateur</span>
+                      {formData.operator && <Check size={14} color="var(--c-success)" />}
                     </div>
-                    {errors.operator && <p style={{ color: 'var(--c-danger)', fontSize: '0.75rem', marginTop: 4 }}>{errors.operator}</p>}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                      {Object.keys(OPERATOR_CONFIG).map(op => {
+                        const isSel = formData.operator === op
+                        return (
+                          <button key={op} onClick={() => {
+                            setFormData({ operator: op }) // Reset country and phone when changing operator
+                            setErrors({})
+                          }}
+                          style={{
+                            padding: '10px 4px', borderRadius: 'var(--r-md)', 
+                            border: `1.5px solid ${isSel ? OPERATOR_CONFIG[op].color : 'var(--c-border)'}`,
+                            background: isSel ? `${OPERATOR_CONFIG[op].color}15` : 'var(--c-surface)',
+                            color: isSel ? OPERATOR_CONFIG[op].color : 'var(--c-text)',
+                            fontFamily: 'Manrope', fontWeight: 800, fontSize: '0.65rem', cursor: 'pointer',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                            transition: 'all 0.2s', transform: isSel ? 'scale(1.05)' : 'scale(1)'
+                          }}>
+                            <div style={{ width: 24, height: 24, borderRadius: 4, background: OPERATOR_CONFIG[op].color, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 900 }}>{op[0]}</div>
+                            {op}
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
-                  <div>
-                    <div className="label-xs" style={{ marginBottom: 6 }}>Numéro de téléphone</div>
-                    <input type="tel" placeholder="ex : +221 77 000 00 00" style={fieldStyle('phone')}
-                      value={formData.phone || ''} onChange={e => setFormData(p => ({ ...p, phone: e.target.value }))} />
-                    {errors.phone && <p style={{ color: 'var(--c-danger)', fontSize: '0.75rem', marginTop: 4 }}>{errors.phone}</p>}
-                  </div>
-                  <p className="body-xs" style={{ color: 'var(--c-text-muted)', textAlign: 'center' }}>
-                    Vous recevrez une notification de confirmation sur ce numéro.
+
+                  {/* 2. Pays (Affiche seulement si opérateur choisi) */}
+                  {formData.operator && (
+                    <div style={{ animation: 'slideDown 0.3s ease-out' }}>
+                      <style>{`@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+                      <div className="label-xs" style={{ marginBottom: 6, display: 'flex', justifyContent: 'space-between' }}>
+                        <span>2. Sélectionner votre pays</span>
+                        {formData.country && <Check size={14} color="var(--c-success)" />}
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                        {OPERATOR_CONFIG[formData.operator].countries.map(c => {
+                          const isSel = formData.country?.id === c.id
+                          return (
+                            <button key={c.id} onClick={() => {
+                              setFormData(p => ({ ...p, country: c, phone: c.prefix + ' ' }))
+                              setErrors({})
+                            }}
+                            style={{
+                              padding: '10px 12px', borderRadius: 'var(--r-md)', textAlign: 'left',
+                              border: `1.5px solid ${isSel ? 'var(--c-primary)' : 'var(--c-border)'}`,
+                              background: isSel ? 'var(--c-primary-soft)' : 'var(--c-surface)',
+                              color: 'var(--c-text)', fontFamily: 'Manrope', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', gap: 10, transition: 'all 0.2s'
+                            }}>
+                              <span style={{ fontSize: '1.2rem' }}>{c.flag}</span>
+                              <div style={{ flex: 1 }}>
+                                <div>{c.name}</div>
+                                <div style={{ fontSize: '0.65rem', color: 'var(--c-text-muted)' }}>{c.prefix}</div>
+                              </div>
+                              {isSel && <div style={{ width: 14, height: 14, borderRadius: '50%', background: 'var(--c-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div style={{ width: 6, height: 6, borderRadius: '50%', background: 'white' }} /></div>}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 3. Numéro de téléphone */}
+                  {formData.country && (
+                    <div style={{ animation: 'slideDown 0.3s ease-out' }}>
+                      <div className="label-xs" style={{ marginBottom: 6 }}>3. Numéro de paiement</div>
+                      <div style={{ position: 'relative' }}>
+                        <input type="tel" 
+                          placeholder={`${formData.country.prefix} 000 00 00`} 
+                          style={{
+                            ...fieldStyle('phone'),
+                            paddingLeft: 14, fontWeight: 700, fontSize: '1.05rem', letterSpacing: '0.05em'
+                          }}
+                          value={formData.phone || ''} 
+                          onChange={e => {
+                            let v = e.target.value
+                            if (!v.startsWith(formData.country.prefix)) v = formData.country.prefix + ' '
+                            setFormData(p => ({ ...p, phone: v }))
+                          }} 
+                        />
+                        <div style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 4, alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--c-text-muted)', textTransform: 'uppercase' }}>{formData.operator} {formData.country.id}</span>
+                          {formData.phone?.length > 10 && <CheckCircle size={16} color="var(--c-success)" />}
+                        </div>
+                      </div>
+                      {errors.phone && <p style={{ color: 'var(--c-danger)', fontSize: '0.75rem', marginTop: 4, fontWeight: 600 }}>{errors.phone}</p>}
+                    </div>
+                  )}
+
+                  <p className="body-xs" style={{ color: 'var(--c-text-muted)', textAlign: 'center', marginTop: 8 }}>
+                    🔒 Paiement sécurisé via portail opérateur national.
                   </p>
                 </div>
               )}
