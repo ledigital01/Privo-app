@@ -129,25 +129,63 @@ function PaymentModal({ isOpen, onClose, plan }) {
     return Object.keys(e).length === 0
   }
 
-  const handlePay = async () => {
+  const handlePay = () => {
     if (!validate()) return
-    setStep('processing')
-    
-    // Simulation du délai réseau
-    await new Promise(r => setTimeout(r, 2500))
 
-    try {
-      // Mise à jour du plan
-      const result = await updateUserPlan(plan.id)
-      if (result.success) {
-        setStep('success')
-      } else {
-        setStep('fail')
-      }
-    } catch (err) {
-      console.error("Payment error:", err)
-      setStep('fail')
+    // Taux de conversion USD -> XOF (650)
+    const EXCHANGE_RATE = 650;
+    const amountUSD = parseFloat(plan.displayPrice.replace(/[^0-9.]/g, '')) || 0;
+    const amountXOF = Math.ceil(amountUSD * EXCHANGE_RATE);
+    
+    // Référence unique pour la transaction
+    const txRef = `DS-${authUser?.id?.slice(0, 5)}-${Date.now()}`;
+
+    if (!window.FlutterwaveCheckout) {
+      alert("Le service de paiement est indisponible. Veuillez rafraîchir la page.");
+      return;
     }
+
+    window.FlutterwaveCheckout({
+      public_key: import.meta.env.VITE_FLUTTERWAVE_PUBLIC_KEY,
+      tx_ref: txRef,
+      amount: amountXOF,
+      currency: "XOF",
+      payment_options: method === 'card' ? "card" : "mobilemoneyghana,mobilemoneyfranco,mobilemoneyuganda,mobilemoneyrwanda,mobilemoneyzambia",
+      customer: {
+        email: authUser?.email,
+        phone_number: formData.phone || "",
+        name: formData.cardName || authUser?.name || "Client DigiSAFE",
+      },
+      customizations: {
+        title: "DigiSAFE - " + plan.name,
+        description: `Abonnement ${plan.name} (${plan.billingCycle})`,
+        logo: "https://privo-app-js.vercel.app/logo.png",
+      },
+      callback: async (data) => {
+        console.log("Flutterwave Callback:", data);
+        if (data.status === "successful") {
+          setStep('processing');
+          try {
+            // Ici on appellera la vérification backend plus tard
+            // Pour l'instant, on met à jour le plan dans le store local
+            const success = await updateUserPlan(plan.id.toLowerCase());
+            if (success) {
+              setStep('success');
+            } else {
+              setStep('fail');
+            }
+          } catch (err) {
+            console.error(err);
+            setStep('fail');
+          }
+        } else {
+          setStep('fail');
+        }
+      },
+      onclose: () => {
+        console.log("Paiement annulé par l'utilisateur");
+      },
+    });
   }
 
   const fieldStyle = (key) => ({
