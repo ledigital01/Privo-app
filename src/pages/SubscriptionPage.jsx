@@ -40,7 +40,6 @@ function PaymentModal({ isOpen, onClose, plan }) {
   const METHODS = [
     { id: 'mobile_money', label: 'Mobile Money', desc: 'Orange Money · Wave · MTN MoMo', icon: <Smartphone size={22} />, color: 'warn' },
     { id: 'card', label: 'Carte Bancaire', desc: 'Visa · Mastercard · AMEX', icon: <CreditCard size={22} />, color: 'primary' },
-    { id: 'wallet', label: 'DigiWallet', desc: `Solde : ${(authUser?.walletBalance || 0).toLocaleString('fr-FR')} FCFA`, icon: <Wallet size={22} />, color: 'success' },
   ]
 
   // Validation par méthode
@@ -56,12 +55,6 @@ function PaymentModal({ isOpen, onClose, plan }) {
       if (!formData.expiry || !/^\d{2}\/\d{2}$/.test(formData.expiry)) e.expiry = 'Format MM/AA requis.'
       if (!formData.cvv || formData.cvv.length < 3) e.cvv = 'CVV à 3 ou 4 chiffres requis.'
     }
-    if (method === 'wallet') {
-      const fcfaPrice = plan.billingCycle === 'yearly' ? PRICING_CONFIG[plan.id].yearlyFcfa : PRICING_CONFIG[plan.id].monthlyFcfa
-      if ((authUser?.walletBalance || 0) < fcfaPrice) {
-        e.wallet = 'Solde insuffisant dans votre DigiWallet.'
-      }
-    }
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -70,18 +63,10 @@ function PaymentModal({ isOpen, onClose, plan }) {
     if (!validate()) return
     setStep('processing')
     
-    // Simulation du délai bancaire/réseau
+    // Simulation du délai réseau
     await new Promise(r => setTimeout(r, 2500))
 
     try {
-      // Si c'est le wallet, on débite réellement en DB
-      if (method === 'wallet') {
-        const fcfaPrice = plan.billingCycle === 'yearly' ? PRICING_CONFIG[plan.id].yearlyFcfa : PRICING_CONFIG[plan.id].monthlyFcfa
-        const newBalance = (authUser?.walletBalance || 0) - fcfaPrice
-        const walletResult = await updateWalletBalance(newBalance)
-        if (!walletResult.success) throw new Error("Erreur de débit portefeuille")
-      }
-
       // Mise à jour du plan
       const result = await updateUserPlan(plan.id)
       if (result.success) {
@@ -148,7 +133,7 @@ function PaymentModal({ isOpen, onClose, plan }) {
                 <ChevronLeft size={20} />
               </button>
               <h2 className="title-md" style={{ flex: 1, textAlign: 'center' }}>
-                {method === 'mobile_money' ? 'Mobile Money' : method === 'card' ? 'Carte Bancaire' : 'DigiWallet'}
+                {method === 'mobile_money' ? 'Mobile Money' : 'Carte Bancaire'}
               </h2>
               <button className="modal-close-btn" onClick={handleClose}><X size={18} /></button>
             </div>
@@ -160,20 +145,12 @@ function PaymentModal({ isOpen, onClose, plan }) {
                   <p className="label-xs" style={{ color: 'var(--c-text-muted)', margin: 0 }}>À payer</p>
                   <p className="title-sm" style={{ margin: 0, color: 'var(--c-primary)' }}>
                     {plan?.displayPrice}
-                    {method === 'wallet' && <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--c-text-muted)', marginLeft: 6 }}>
-                      ({(plan.billingCycle === 'yearly' ? PRICING_CONFIG[plan.id].yearlyFcfa : PRICING_CONFIG[plan.id].monthlyFcfa).toLocaleString('fr-FR')} FCFA)
-                    </span>}
                   </p>
                 </div>
                 <span className="badge primary" style={{ background: 'var(--c-primary-soft)', color: 'var(--c-primary)' }}>Plan {plan?.name}</span>
               </div>
 
-              {/* Erreurs globales (ex: wallet insuffisant) */}
-              {errors.wallet && (
-                <div style={{ background: 'var(--c-danger-soft)', color: 'var(--c-danger)', padding: '10px 14px', borderRadius: 'var(--r-md)', marginBottom: 16, fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <XCircle size={16} /> {errors.wallet}
-                </div>
-              )}
+
 
               {/* MOBILE MONEY */}
               {method === 'mobile_money' && (
@@ -244,30 +221,7 @@ function PaymentModal({ isOpen, onClose, plan }) {
                 </div>
               )}
 
-              {/* DIGIWALLET */}
-              {method === 'wallet' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center', textAlign: 'center' }}>
-                  <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--c-success-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Wallet size={28} color="var(--c-success)" />
-                  </div>
-                  <div>
-                    <p className="body-sm" style={{ color: 'var(--c-text-muted)' }}>Solde DigiWallet disponible</p>
-                    <p className="title-md" style={{ color: 'var(--c-success)', margin: '4px 0' }}>{(authUser?.walletBalance || 0).toLocaleString('fr-FR')} FCFA</p>
-                  </div>
-                  <div style={{ width: '100%', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)', padding: '12px 16px', textAlign: 'left' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span className="body-xs" style={{ color: 'var(--c-text-muted)' }}>Plan {plan?.name}</span>
-                      <span className="body-xs" style={{ fontWeight: 700 }}>{plan?.displayPrice}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-                      <span className="body-xs" style={{ color: 'var(--c-text-muted)' }}>Solde après paiement</span>
-                      <span className="body-xs" style={{ fontWeight: 700, color: 'var(--c-success)' }}>
-                        {~~((authUser?.walletBalance || 0) - (plan.billingCycle === 'yearly' ? PRICING_CONFIG[plan.id].yearlyFcfa : PRICING_CONFIG[plan.id].monthlyFcfa)).toLocaleString('fr-FR')} FCFA
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
+
 
               <button className="btn-primary" style={{ width: '100%', marginTop: 24 }} onClick={handlePay}>
                 <Lock size={16} /> Confirmer et payer
