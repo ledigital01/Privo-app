@@ -1,12 +1,13 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Shield, Check, ChevronRight, Star, Zap, Crown,
   Smartphone, CreditCard, Wallet, X, ArrowLeft,
   Lock, CheckCircle, XCircle, ChevronLeft,
-  Files, Database, Share2
+  Files, Database, Share2, UserPlus, Trash2, Mail
 } from 'lucide-react'
 import { useApp } from '../store/AppContext'
 import { PLANS as PLAN_DEFS } from '../utils/plans'
+import { supabase } from '../utils/supabaseClient'
 
 /* ================================================================
    MODAL — PAYMENT METHOD SELECTION
@@ -281,6 +282,77 @@ export default function SubscriptionPage({ onBack }) {
   const [openFaq, setOpenFaq] = useState(null)
   const [billing, setBilling] = useState('monthly') // 'monthly' | 'yearly'
 
+  // --- TEAM MANAGEMENT STATE ---
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteLoading, setInviteLoading] = useState(false)
+  const [inviteStatus, setInviteStatus] = useState(null) // { type: 'success'|'error', msg: string }
+  const [invitations, setInvitations] = useState([])
+
+  // Charger les invitations existantes
+  const fetchInvitations = async () => {
+    if (!authUser?.id) return
+    const { data } = await supabase
+      .from('team_invitations')
+      .select('*')
+      .eq('owner_id', authUser.id)
+      .order('created_at', { ascending: false })
+    if (data) setInvitations(data)
+  }
+
+  useEffect(() => {
+    if (currentPlanId === 'business') fetchInvitations()
+  }, [currentPlanId, authUser?.id])
+
+  // Envoyer une invitation
+  const handleInvite = async () => {
+    // Validation
+    if (!inviteEmail.trim()) {
+      setInviteStatus({ type: 'error', msg: 'Veuillez saisir une adresse email.' })
+      return
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(inviteEmail.trim())) {
+      setInviteStatus({ type: 'error', msg: 'Adresse email invalide.' })
+      return
+    }
+    if (inviteEmail.trim().toLowerCase() === authUser?.email?.toLowerCase()) {
+      setInviteStatus({ type: 'error', msg: 'Vous ne pouvez pas vous inviter vous-même.' })
+      return
+    }
+    if (invitations.length >= 4) { // 4 invités + 1 propriétaire = 5 max
+      setInviteStatus({ type: 'error', msg: 'Limite de 5 membres atteinte.' })
+      return
+    }
+    const alreadyInvited = invitations.some(inv => inv.invitee_email.toLowerCase() === inviteEmail.trim().toLowerCase())
+    if (alreadyInvited) {
+      setInviteStatus({ type: 'error', msg: 'Cet email a déjà été invité.' })
+      return
+    }
+
+    setInviteLoading(true)
+    setInviteStatus(null)
+
+    const { error } = await supabase
+      .from('team_invitations')
+      .insert([{ owner_id: authUser.id, invitee_email: inviteEmail.trim().toLowerCase() }])
+
+    setInviteLoading(false)
+
+    if (error) {
+      setInviteStatus({ type: 'error', msg: "Erreur lors de l'envoi. Réessayez." })
+    } else {
+      setInviteStatus({ type: 'success', msg: `Invitation envoyée à ${inviteEmail.trim()} !` })
+      setInviteEmail('')
+      fetchInvitations()
+    }
+  }
+
+  // Supprimer une invitation
+  const handleRemoveInvite = async (id) => {
+    await supabase.from('team_invitations').delete().eq('id', id)
+    setInvitations(prev => prev.filter(inv => inv.id !== id))
+  }
+
   // Normaliser l'ID du plan : gérer les alias et la casse
   const rawPlanId = (authUser?.plan || 'free').toLowerCase()
   const currentPlanId = rawPlanId === 'enterprise' ? 'business' : rawPlanId
@@ -385,40 +457,104 @@ export default function SubscriptionPage({ onBack }) {
             <div style={{ marginTop: 24, marginBottom: 32 }}>
               <div className="section-header">
                 <h2>Équipe & Collaborateurs</h2>
+                <span className="label-xs" style={{ color: 'var(--c-text-muted)' }}>
+                  {invitations.length + 1} / 5 membres
+                </span>
               </div>
               <div className="card" style={{ padding: 20 }}>
                 <p className="body-sm" style={{ color: 'var(--c-text-muted)', marginBottom: 16 }}>
-                  Gérez jusqu'à 5 collaborateurs pour co-gérer ce coffre-fort d'entreprise de 50 Go.
+                  Invitez jusqu'à 4 collaborateurs. Ils recevront un accès à votre coffre-fort d'entreprise.
                 </p>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
-                  <input 
-                    type="email" 
-                    placeholder="email.du.collaborateur@exemple.com" 
-                    className="input-field" 
+
+                {/* Formulaire d'invitation */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+                  <input
+                    type="email"
+                    placeholder="email@collaborateur.com"
+                    className="input-field"
                     style={{ width: '100%', fontSize: '0.9rem' }}
+                    value={inviteEmail}
+                    onChange={e => { setInviteEmail(e.target.value); setInviteStatus(null) }}
+                    onKeyDown={e => e.key === 'Enter' && handleInvite()}
+                    disabled={inviteLoading}
                   />
-                  <button 
-                    className="btn-primary" 
-                    style={{ width: '100%' }}
-                    onClick={() => alert("L'invitation sécurisée a été envoyée avec succès à votre collaborateur ! Il aura bientôt accès au coffre-fort.")}
+                  <button
+                    className="btn-primary"
+                    style={{ width: '100%', opacity: inviteLoading ? 0.7 : 1 }}
+                    onClick={handleInvite}
+                    disabled={inviteLoading}
                   >
-                    Envoyer l'invitation
+                    {inviteLoading ? 'Envoi en cours...' : <><UserPlus size={16} /> Envoyer l'invitation</>}
                   </button>
+
+                  {/* Feedback */}
+                  {inviteStatus && (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px',
+                      background: inviteStatus.type === 'success' ? 'var(--c-success-soft)' : 'var(--c-danger-soft)',
+                      borderRadius: 'var(--r-md)'
+                    }}>
+                      {inviteStatus.type === 'success'
+                        ? <CheckCircle size={16} color="var(--c-success)" />
+                        : <XCircle size={16} color="var(--c-danger)" />}
+                      <span style={{
+                        fontSize: '0.82rem', fontWeight: 600,
+                        color: inviteStatus.type === 'success' ? 'var(--c-success)' : 'var(--c-danger)'
+                      }}>
+                        {inviteStatus.msg}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Liste des membres actife (MOCK) */}
+                {/* Liste des membres */}
                 <div className="space-y-3">
+                  {/* Propriétaire (moi) */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div className="flex-center" style={{ width: 32, height: 32, background: 'var(--c-primary)', color: 'white', borderRadius: 10, fontWeight: 700, fontSize: '0.8rem' }}>M</div>
+                      <div className="flex-center" style={{ width: 32, height: 32, background: 'var(--c-primary)', color: 'white', borderRadius: 10, fontWeight: 700, fontSize: '0.8rem' }}>
+                        {authUser?.initials || 'M'}
+                      </div>
                       <div>
-                        <p className="body-sm" style={{ fontWeight: 600, margin: 0 }}>Moi (Propriétaire)</p>
-                        <p style={{ fontSize: '0.7rem', color: 'var(--c-text-muted)', margin: 0 }}>Plan Business Actif</p>
+                        <p className="body-sm" style={{ fontWeight: 600, margin: 0 }}>{authUser?.name} (Moi)</p>
+                        <p style={{ fontSize: '0.7rem', color: 'var(--c-text-muted)', margin: 0 }}>{authUser?.email}</p>
                       </div>
                     </div>
                     <span className="badge success" style={{ background: 'var(--c-success-soft)', color: 'var(--c-success)', border: 'none' }}>Admin</span>
                   </div>
+
+                  {/* Invitations */}
+                  {invitations.map(inv => (
+                    <div key={inv.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div className="flex-center" style={{ width: 32, height: 32, background: 'var(--c-surface)', border: '1.5px dashed var(--c-border)', borderRadius: 10 }}>
+                          <Mail size={14} color="var(--c-text-muted)" />
+                        </div>
+                        <div>
+                          <p className="body-sm" style={{ fontWeight: 500, margin: 0 }}>{inv.invitee_email}</p>
+                          <p style={{ fontSize: '0.7rem', color: 'var(--c-text-muted)', margin: 0 }}>
+                            Invitation envoyée
+                          </p>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#f59e0b', background: '#fef9c3', padding: '2px 8px', borderRadius: 99 }}>En attente</span>
+                        <button
+                          onClick={() => handleRemoveInvite(inv.id)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--c-text-muted)' }}
+                          title="Retirer l'invitation"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {invitations.length === 0 && (
+                    <p className="body-xs" style={{ textAlign: 'center', color: 'var(--c-text-muted)', paddingTop: 8 }}>
+                      Aucun collaborateur invité pour l'instant.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
