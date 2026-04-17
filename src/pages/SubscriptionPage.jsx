@@ -24,20 +24,20 @@ function formatExpiry(val) {
 }
 
 const COUNTRIES = [
-  { id: 'ci', name: 'Côte d\'Ivoire', flag: '🇨🇮', prefix: '+225' },
-  { id: 'sn', name: 'Sénégal', flag: '🇸🇳', prefix: '+221' },
-  { id: 'bj', name: 'Bénin', flag: '🇧🇯', prefix: '+229' },
-  { id: 'tg', name: 'Togo', flag: '🇹🇬', prefix: '+228' },
-  { id: 'ml', name: 'Mali', flag: '🇲🇱', prefix: '+223' },
-  { id: 'bf', name: 'Burkina Faso', flag: '🇧🇫', prefix: '+226' },
-  { id: 'cm', name: 'Cameroun', flag: '🇨🇲', prefix: '+237' },
-  { id: 'gn', name: 'Guinée', flag: '🇬🇳', prefix: '+224' },
-  { id: 'ne', name: 'Niger', flag: '🇳🇪', prefix: '+227' },
-  { id: 'cg', name: 'Congo', flag: '🇨🇬', prefix: '+242' },
-  { id: 'rdc', name: 'RD Congo', flag: '🇨🇩', prefix: '+243' },
-  { id: 'gab', name: 'Gabon', flag: '🇬🇦', prefix: '+241' },
-  { id: 'td', name: 'Tchad', flag: '🇹🇩', prefix: '+235' },
-  { id: 'mg', name: 'Madagascar', flag: '🇲🇬', prefix: '+261' },
+  { id: 'ci', name: 'Côte d\'Ivoire', prefix: '+225' },
+  { id: 'sn', name: 'Sénégal', prefix: '+221' },
+  { id: 'bj', name: 'Bénin', prefix: '+229' },
+  { id: 'tg', name: 'Togo', prefix: '+228' },
+  { id: 'ml', name: 'Mali', prefix: '+223' },
+  { id: 'bf', name: 'Burkina Faso', prefix: '+226' },
+  { id: 'cm', name: 'Cameroun', prefix: '+237' },
+  { id: 'gn', name: 'Guinée', prefix: '+224' },
+  { id: 'ne', name: 'Niger', prefix: '+227' },
+  { id: 'cg', name: 'Congo', prefix: '+242' },
+  { id: 'cd', name: 'RD Congo', prefix: '+243' },
+  { id: 'ga', name: 'Gabon', prefix: '+241' },
+  { id: 'td', name: 'Tchad', prefix: '+235' },
+  { id: 'mg', name: 'Madagascar', prefix: '+261' },
 ]
 
 const OPERATOR_CONFIG = {
@@ -232,7 +232,7 @@ function PaymentModal({ isOpen, onClose, plan }) {
                   padding: '12px 16px', borderRadius: 'var(--r-md)', boxShadow: 'var(--shadow-sm)'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: '1.4rem' }}>{currentCountry.flag}</span>
+                    <img src={`https://flagcdn.com/w40/${currentCountry.id}.png`} width="24" style={{ borderRadius: 3, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }} alt="" />
                     <div>
                       <div className="action-text" style={{ fontSize: '0.9rem' }}>{currentCountry.name}</div>
                     </div>
@@ -262,7 +262,7 @@ function PaymentModal({ isOpen, onClose, plan }) {
                           border: selectedCountryId === c.id ? '1px solid var(--c-primary)' : '1px solid transparent',
                           borderRadius: 'var(--r-sm)', cursor: 'pointer', textAlign: 'left'
                         }}>
-                        <span>{c.flag}</span>
+                        <img src={`https://flagcdn.com/w40/${c.id}.png`} width="20" style={{ borderRadius: 2 }} alt="" />
                         <span style={{ fontSize: '0.75rem' }}>{c.name}</span>
                       </button>
                     ))}
@@ -380,7 +380,7 @@ function PaymentModal({ isOpen, onClose, plan }) {
                       </div>
                       <div>
                         <div className="action-text">{formData.operator} Money</div>
-                        <div className="action-desc">{formData.country?.name} ({formData.country?.flag})</div>
+                        <div className="action-desc">{formData.country?.name}</div>
                       </div>
                     </div>
                   </div>
