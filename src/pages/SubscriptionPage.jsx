@@ -214,8 +214,10 @@ function PaymentModal({ isOpen, onClose, plan }) {
             <div className="modal-header">
               <div>
                 <h2 className="title-md">Finaliser l'abonnement</h2>
-                <p className="body-sm" style={{ marginTop: 2, color: 'var(--c-text-muted)' }}>
-                  Plan <strong style={{ color: 'var(--c-text)' }}>{plan?.name}</strong> — <strong style={{ color: 'var(--c-primary)' }}>{currentPricing.label}</strong>
+                <p className="body-sm" style={{ marginTop: 2, color: 'var(--c-text-muted)', display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                  Plan <strong style={{ color: 'var(--c-text)' }}>{plan?.name}</strong> — 
+                  <span style={{ color: 'var(--c-primary)', fontWeight: 800 }}>{currentPricing.label}</span>
+                  <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{currentPricing.fcfa}</span>
                 </p>
               </div>
               <button className="modal-close-btn" onClick={handleClose}><X size={18} /></button>
@@ -596,16 +598,19 @@ function getPlanPrice(planId, billing) {
   if (planId === 'free') return { label: 'Gratuit', sub: '' }
   const cfg = PRICING_CONFIG[planId]
   if (!cfg) return { label: 'N/A', sub: '' }
+  
   if (billing === 'yearly') {
     return {
-      label: `${cfg.yearly}$ / an (${cfg.yearlyFcfa.toLocaleString()} FCFA / an)`,
+      label: `${cfg.yearly}$ / an`,
+      fcfa: `(${cfg.yearlyFcfa.toLocaleString()} FCFA / an)`,
       sub: `soit ${(cfg.yearly / 12).toFixed(2)}$ / mois (${Math.round(cfg.yearlyFcfa / 12).toLocaleString()} FCFA / mois)`,
       badge: cfg.yearlyBadge,
       savings: `Économisez ${cfg.yearlySavings}$`,
     }
   }
   return {
-    label: `${cfg.monthly}$ / mois (${cfg.monthlyFcfa.toLocaleString()} FCFA / mois)`,
+    label: `${cfg.monthly}$ / mois`,
+    fcfa: `(${cfg.monthlyFcfa.toLocaleString()} FCFA / mois)`,
     sub: '',
   }
 }
@@ -996,13 +1001,22 @@ export default function SubscriptionPage({ onBack }) {
                       const pricing = getPlanPrice(plan.id, billing)
                       return (
                         <>
-                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 2 }}>
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
                             <span style={{
-                              fontFamily: 'Manrope', fontWeight: 800, fontSize: '1.4rem',
+                              fontFamily: 'Manrope', fontWeight: 800, fontSize: '1.2rem',
                               color: plan.recommended ? 'white' : 'var(--c-text)'
                             }}>
                               {pricing.label}
                             </span>
+                            {pricing.fcfa && (
+                              <span style={{
+                                fontSize: '0.8rem', fontWeight: 600,
+                                opacity: 0.85,
+                                color: plan.recommended ? 'rgba(255,255,255,0.9)' : 'var(--c-text-muted)'
+                              }}>
+                                {pricing.fcfa}
+                              </span>
+                            )}
                           </div>
                           {pricing.sub && (
                             <p style={{ fontSize: '0.72rem', color: plan.recommended ? 'rgba(255,255,255,0.7)' : 'var(--c-text-muted)', margin: 0 }}>
