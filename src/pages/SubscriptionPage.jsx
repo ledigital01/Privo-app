@@ -1096,7 +1096,13 @@ export default function SubscriptionPage({ onBack }) {
                 {/* CTA */}
                 {plan.id !== currentPlanId && (
                   <button
-                    onClick={() => {
+                    onClick={async () => {
+                      if (plan.id === 'free') {
+                        if (window.confirm("Voulez-vous vraiment repasser au plan gratuit ? Vos limites de stockage et de documents seront réduites.")) {
+                          await updateUserPlan('free')
+                        }
+                        return
+                      }
                       const pricing = getPlanPrice(plan.id, billing)
                       setSelectedPlan({
                         ...plan,
@@ -1115,7 +1121,7 @@ export default function SubscriptionPage({ onBack }) {
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
                     }}
                   >
-                    {plan.price === '0 FCFA' ? 'Revenir au gratuit' : 'Mettre à niveau'} <ChevronRight size={16} />
+                    {plan.id === 'free' ? <><ArrowLeft size={16} /> Revenir au gratuit</> : <>{'Mettre à niveau'} <ChevronRight size={16} /></>}
                   </button>
                 )}
                 {plan.id === currentPlanId && (
