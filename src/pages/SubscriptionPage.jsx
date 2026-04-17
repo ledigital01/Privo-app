@@ -295,9 +295,10 @@ function PaymentModal({ isOpen, onClose, plan }) {
                       setFormData(prev => ({ 
                         ...prev, 
                         operator: op.name,
-                        country: currentCountry.name,
-                        prefix: currentCountry.prefix
+                        country: currentCountry, // On passe l'objet complet
                       }));
+                      // Initialiser le téléphone avec le préfixe
+                      setFormData(prev => ({ ...prev, phone: currentCountry.prefix + ' ' }));
                       setStep('form');
                     }}
                     style={{ padding: 12, flexDirection: 'column', alignItems: 'flex-start', gap: 8, height: 'auto' }}>
@@ -358,103 +359,54 @@ function PaymentModal({ isOpen, onClose, plan }) {
 
 
 
-              {/* MOBILE MONEY PRO FLOW */}
+              {/* MOBILE MONEY SIMPLIFIED FLOW */}
               {method === 'mobile_money' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   
-                  {/* 1. Opérateur */}
-                  <div>
-                    <div className="label-xs" style={{ marginBottom: 6, display: 'flex', justifyContent: 'space-between' }}>
-                      <span>1. Choisir l'opérateur</span>
-                      {formData.operator && <Check size={14} color="var(--c-success)" />}
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                      {Object.keys(OPERATOR_CONFIG).map(op => {
-                        const isSel = formData.operator === op
-                        return (
-                          <button key={op} onClick={() => {
-                            setFormData({ operator: op }) // Reset country and phone when changing operator
-                            setErrors({})
-                          }}
-                          style={{
-                            padding: '10px 4px', borderRadius: 'var(--r-md)', 
-                            border: `1.5px solid ${isSel ? OPERATOR_CONFIG[op].color : 'var(--c-border)'}`,
-                            background: isSel ? `${OPERATOR_CONFIG[op].color}15` : 'var(--c-surface)',
-                            color: isSel ? OPERATOR_CONFIG[op].color : 'var(--c-text)',
-                            fontFamily: 'Manrope', fontWeight: 800, fontSize: '0.65rem', cursor: 'pointer',
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                            transition: 'all 0.2s', transform: isSel ? 'scale(1.05)' : 'scale(1)'
-                          }}>
-                            <div style={{ width: 24, height: 24, borderRadius: 4, background: OPERATOR_CONFIG[op].color, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 900 }}>{op[0]}</div>
-                            {op}
-                          </button>
-                        )
-                      })}
+                  {/* Récapitulatif spécifique */}
+                  <div style={{ padding: '0 4px', marginBottom: -4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 8, background: (OPERATOR_CONFIG[formData.operator]?.color || 'var(--c-primary)') + '22', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                         <Smartphone size={18} color={OPERATOR_CONFIG[formData.operator]?.color} />
+                      </div>
+                      <div>
+                        <div className="action-text">{formData.operator} Money</div>
+                        <div className="action-desc">{formData.country?.name} ({formData.country?.flag})</div>
+                      </div>
                     </div>
                   </div>
 
-                  {/* 2. Pays (Affiche seulement si opérateur choisi) */}
-                  {formData.operator && (
-                    <div style={{ animation: 'slideDown 0.3s ease-out' }}>
-                      <style>{`@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
-                      <div className="label-xs" style={{ marginBottom: 6, display: 'flex', justifyContent: 'space-between' }}>
-                        <span>2. Sélectionner votre pays</span>
-                        {formData.country && <Check size={14} color="var(--c-success)" />}
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                        {OPERATOR_CONFIG[formData.operator].countries.map(c => {
-                          const isSel = formData.country?.id === c.id
-                          return (
-                            <button key={c.id} onClick={() => {
-                              setFormData(p => ({ ...p, country: c, phone: c.prefix + ' ' }))
-                              setErrors({})
-                            }}
-                            style={{
-                              padding: '10px 12px', borderRadius: 'var(--r-md)', textAlign: 'left',
-                              border: `1.5px solid ${isSel ? 'var(--c-primary)' : 'var(--c-border)'}`,
-                              background: isSel ? 'var(--c-primary-soft)' : 'var(--c-surface)',
-                              color: 'var(--c-text)', fontFamily: 'Manrope', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer',
-                              display: 'flex', alignItems: 'center', gap: 10, transition: 'all 0.2s'
-                            }}>
-                              <span style={{ fontSize: '1.2rem' }}>{c.flag}</span>
-                              <div style={{ flex: 1 }}>
-                                <div>{c.name}</div>
-                                <div style={{ fontSize: '0.65rem', color: 'var(--c-text-muted)' }}>{c.prefix}</div>
-                              </div>
-                              {isSel && <div style={{ width: 14, height: 14, borderRadius: '50%', background: 'var(--c-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div style={{ width: 6, height: 6, borderRadius: '50%', background: 'white' }} /></div>}
-                            </button>
-                          )
-                        })}
+                  {/* Saisie du téléphone */}
+                  <div>
+                    <div className="label-xs" style={{ marginBottom: 6 }}>Saisissez votre numéro {formData.operator}</div>
+                    <div style={{ position: 'relative' }}>
+                      <input type="tel" 
+                        autoFocus
+                        placeholder={`${formData.country?.prefix} 000 00 00`} 
+                        style={{
+                          ...fieldStyle('phone'),
+                          paddingLeft: 14, fontWeight: 700, fontSize: '1.2rem', letterSpacing: '0.05em'
+                        }}
+                        value={formData.phone || ''} 
+                        onChange={e => {
+                          let v = e.target.value
+                          const pref = formData.country?.prefix || ''
+                          if (!v.startsWith(pref)) v = pref + ' '
+                          setFormData(p => ({ ...p, phone: v }))
+                        }} 
+                      />
+                      <div style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 4, alignItems: 'center' }}>
+                        {formData.phone?.length > 10 && <CheckCircle size={18} color="var(--c-success)" />}
                       </div>
                     </div>
-                  )}
+                    {errors.phone && <p style={{ color: 'var(--c-danger)', fontSize: '0.75rem', marginTop: 4, fontWeight: 600 }}>{errors.phone}</p>}
+                  </div>
 
-                  {/* 3. Numéro de téléphone */}
-                  {formData.country && (
-                    <div style={{ animation: 'slideDown 0.3s ease-out' }}>
-                      <div className="label-xs" style={{ marginBottom: 6 }}>3. Numéro de paiement</div>
-                      <div style={{ position: 'relative' }}>
-                        <input type="tel" 
-                          placeholder={`${formData.country.prefix} 000 00 00`} 
-                          style={{
-                            ...fieldStyle('phone'),
-                            paddingLeft: 14, fontWeight: 700, fontSize: '1.05rem', letterSpacing: '0.05em'
-                          }}
-                          value={formData.phone || ''} 
-                          onChange={e => {
-                            let v = e.target.value
-                            if (!v.startsWith(formData.country.prefix)) v = formData.country.prefix + ' '
-                            setFormData(p => ({ ...p, phone: v }))
-                          }} 
-                        />
-                        <div style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 4, alignItems: 'center' }}>
-                          <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--c-text-muted)', textTransform: 'uppercase' }}>{formData.operator} {formData.country.id}</span>
-                          {formData.phone?.length > 10 && <CheckCircle size={16} color="var(--c-success)" />}
-                        </div>
-                      </div>
-                      {errors.phone && <p style={{ color: 'var(--c-danger)', fontSize: '0.75rem', marginTop: 4, fontWeight: 600 }}>{errors.phone}</p>}
-                    </div>
-                  )}
+                  <p className="body-xs" style={{ color: 'var(--c-text-muted)', textAlign: 'center', marginTop: 8 }}>
+                    🔒 Paiement sécurisé via portail {formData.operator} national.
+                  </p>
+                </div>
+              )}
 
                   <p className="body-xs" style={{ color: 'var(--c-text-muted)', textAlign: 'center', marginTop: 8 }}>
                     🔒 Paiement sécurisé via portail opérateur national.
