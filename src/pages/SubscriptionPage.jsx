@@ -176,9 +176,9 @@ function PaymentModal({ isOpen, onClose, plan }) {
               <button className="modal-close-btn" onClick={handleClose}><X size={18} /></button>
             </div>
             <div className="modal-body">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--c-primary-soft)', borderRadius: 'var(--r-md)', padding: '10px 14px', marginBottom: 8 }}>
-                <Lock size={16} color="var(--c-primary)" />
-                <p className="body-xs" style={{ color: 'var(--c-primary)', margin: 0, fontWeight: 600 }}>Paiement 100% sécurisé · SSL · AES-256</p>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--c-surface-2)', borderRadius: 99, padding: '5px 12px', marginBottom: 12 }}>
+                <Lock size={13} color="var(--c-text-muted)" />
+                <span style={{ fontSize: '0.65rem', color: 'var(--c-text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Paiement 100% sécurisé</span>
               </div>
               <div className="label-xs" style={{ paddingLeft: 4, marginTop: 12, marginBottom: 4 }}>Choisir un moyen de paiement</div>
               {METHODS.map(m => (
