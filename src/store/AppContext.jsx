@@ -144,9 +144,12 @@ export const AppProvider = ({ children }) => {
   }
 
   const fetchStorageSize = async (userId) => {
+    const uid = userId || authUser?.id
+    if (!uid) return
     try {
-      const { data, error } = await supabase.storage.from('documents').list(userId)
+      const { data, error } = await supabase.storage.from('documents').list(uid)
       if (!error && data) {
+        // Nettoyer les fichiers qui pourraient être des dossiers ou invalides (metadata.size est 0 pour les dossiers)
         const total = data.reduce((acc, file) => acc + (file.metadata?.size || 0), 0)
         setStorageUsedBytes(total)
       }
@@ -219,6 +222,7 @@ export const AppProvider = ({ children }) => {
       }
 
       setDocuments(prev => [newDoc, ...prev])
+      fetchStorageSize(authUser.id) // Actualiser l'espace après upload
       return { success: true, data: newDoc }
 
     } catch (err) {
@@ -305,9 +309,24 @@ export const AppProvider = ({ children }) => {
   // 7. CRUD Documents
   // ----------------------------------------------------------------
   const deleteDocument = async (id) => {
-    const { error } = await supabase.from('documents').delete().eq('id', id)
-    if (!error) {
-      setDocuments(prev => prev.filter(d => d.id !== id))
+    try {
+      const docToDelete = documents.find(d => d.id === id)
+      
+      const { error } = await supabase.from('documents').delete().eq('id', id)
+      if (!error) {
+        // 1. Supprimer le fichier réel du stockage cloud
+        if (docToDelete?.filePath) {
+          await supabase.storage.from('documents').remove([docToDelete.filePath])
+        }
+        
+        // 2. Mettre à jour l'état local
+        setDocuments(prev => prev.filter(d => d.id !== id))
+        
+        // 3. Recalculer l'espace utilisé
+        fetchStorageSize(authUser?.id)
+      }
+    } catch (err) {
+      console.error("Erreur lors de la suppression:", err)
     }
   }
 

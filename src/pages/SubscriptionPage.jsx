@@ -129,81 +129,25 @@ function PaymentModal({ isOpen, onClose, plan }) {
     return Object.keys(e).length === 0
   }
 
-  const handlePay = () => {
+  const handlePay = async () => {
     if (!validate()) return
-
-    // Taux de conversion USD -> XOF (650)
-    const EXCHANGE_RATE = 650;
-    const amountUSD = parseFloat(plan.displayPrice.replace(/[^0-9.]/g, '')) || 0;
-    const amountXOF = Math.ceil(amountUSD * EXCHANGE_RATE);
+    setStep('processing')
     
-    // Référence unique pour la transaction
-    const txRef = `DS-${authUser?.id?.slice(0, 5)}-${Date.now()}`;
+    // Simulation du délai réseau
+    await new Promise(r => setTimeout(r, 2500))
 
-    if (!window.FlutterwaveCheckout) {
-      alert("Le service de paiement est indisponible. Veuillez rafraîchir la page.");
-      return;
+    try {
+      // Mise à jour du plan
+      const result = await updateUserPlan(plan.id)
+      if (result.success) {
+        setStep('success')
+      } else {
+        setStep('fail')
+      }
+    } catch (err) {
+      console.error("Payment error:", err)
+      setStep('fail')
     }
-
-    window.FlutterwaveCheckout({
-      public_key: import.meta.env.VITE_FLUTTERWAVE_PUBLIC_KEY,
-      tx_ref: txRef,
-      amount: amountXOF,
-      currency: "XOF",
-      payment_options: method === 'card' ? "card" : "mobilemoneyghana,mobilemoneyfranco,mobilemoneyuganda,mobilemoneyrwanda,mobilemoneyzambia",
-      customer: {
-        email: authUser?.email,
-        phone_number: formData.phone || "",
-        name: formData.cardName || authUser?.name || "Client DigiSAFE",
-      },
-      customizations: {
-        title: "DigiSAFE - " + plan.name,
-        description: `Abonnement ${plan.name} (${plan.billingCycle})`,
-        logo: "https://privo-app-js.vercel.app/logo.png",
-      },
-      callback: async (data) => {
-        console.log("Flutterwave Callback:", data);
-        if (data.status === "successful") {
-          setStep('processing');
-          try {
-            // --- VÉRIFICATION BACKEND RÉELLE ---
-            const verifyRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-payment`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-              },
-              body: JSON.stringify({
-                transaction_id: data.transaction_id,
-                tx_ref: data.tx_ref,
-                user_id: authUser?.id,
-                plan_id: plan.id.toLowerCase(),
-                billing_cycle: plan.billingCycle
-              })
-            });
-
-            const verifyResult = await verifyRes.json();
-
-            if (verifyResult.success) {
-              // Re-charger les données utilisateur pour refléter le nouveau plan
-              await updateUserPlan(plan.id.toLowerCase()); 
-              setStep('success');
-            } else {
-              console.error("Verification failed:", verifyResult.error);
-              setStep('fail');
-            }
-          } catch (err) {
-            console.error("Verification error:", err);
-            setStep('fail');
-          }
-        } else {
-          setStep('fail');
-        }
-      },
-      onclose: () => {
-        console.log("Paiement annulé par l'utilisateur");
-      },
-    });
   }
 
   const fieldStyle = (key) => ({
