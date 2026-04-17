@@ -100,6 +100,12 @@ function PaymentModal({ isOpen, onClose, plan }) {
   const [errors, setErrors] = useState({})
   const { updateUserPlan, authUser } = useApp()
 
+  // État local pour le cycle de facturation (permet de changer dans le modal)
+  const [internalBilling, setInternalBilling] = useState(plan?.billingCycle || 'monthly')
+  
+  // Recalculer le prix dynamiquement
+  const currentPricing = getPlanPrice(plan?.id, internalBilling)
+
   if (!isOpen) return null
 
   const handleClose = () => {
@@ -170,15 +176,38 @@ function PaymentModal({ isOpen, onClose, plan }) {
               <div>
                 <h2 className="title-md">Finaliser l'abonnement</h2>
                 <p className="body-sm" style={{ marginTop: 2, color: 'var(--c-text-muted)' }}>
-                  Plan <strong style={{ color: 'var(--c-text)' }}>{plan?.name}</strong> — <strong style={{ color: 'var(--c-primary)' }}>{plan?.displayPrice}</strong>
+                  Plan <strong style={{ color: 'var(--c-text)' }}>{plan?.name}</strong> — <strong style={{ color: 'var(--c-primary)' }}>{currentPricing.label}</strong>
                 </p>
               </div>
               <button className="modal-close-btn" onClick={handleClose}><X size={18} /></button>
             </div>
             <div className="modal-body">
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--c-surface-2)', borderRadius: 99, padding: '5px 12px', marginBottom: 12 }}>
-                <Lock size={13} color="var(--c-text-muted)" />
-                <span style={{ fontSize: '0.65rem', color: 'var(--c-text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Paiement 100% sécurisé</span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--c-surface-2)', borderRadius: 99, padding: '5px 12px' }}>
+                  <Lock size={13} color="var(--c-text-muted)" />
+                  <span style={{ fontSize: '0.65rem', color: 'var(--c-text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Paiement sécurisé</span>
+                </div>
+                
+                {/* Sélecteur de période */}
+                <div style={{ 
+                  display: 'flex', background: 'var(--c-surface-2)', padding: 3, borderRadius: 99,
+                  gap: 2, border: '1px solid var(--c-border)'
+                }}>
+                  {['monthly', 'yearly'].map(b => (
+                    <button key={b} 
+                      onClick={() => setInternalBilling(b)}
+                      style={{
+                        padding: '4px 10px', borderRadius: 99, fontSize: '0.65rem', fontWeight: 800,
+                        background: internalBilling === b ? 'white' : 'transparent',
+                        color: internalBilling === b ? 'var(--c-primary)' : 'var(--c-text-muted)',
+                        boxShadow: internalBilling === b ? 'var(--shadow-xs)' : 'none',
+                        border: 'none', cursor: 'pointer', transition: 'all 0.2s',
+                        textTransform: 'uppercase', letterSpacing: '0.02em'
+                      }}>
+                      {b === 'monthly' ? 'Mensuel' : 'Annuel'}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="label-xs" style={{ paddingLeft: 4, marginTop: 12, marginBottom: 4 }}>Choisir un moyen de paiement</div>
               {METHODS.map(m => (
