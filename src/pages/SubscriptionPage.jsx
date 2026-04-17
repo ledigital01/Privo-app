@@ -385,35 +385,69 @@ function PaymentModal({ isOpen, onClose, plan }) {
                     </div>
                   </div>
 
-                  {/* Saisie du téléphone */}
+                  {/* Saisie du téléphone (Split Design) */}
                   <div>
-                    <div className="label-xs" style={{ marginBottom: 6 }}>Saisissez votre numéro {formData.operator}</div>
-                    <div style={{ position: 'relative' }}>
-                      <input type="tel" 
-                        autoFocus
-                        placeholder={`${formData.country?.prefix} 000 00 00`} 
-                        style={{
-                          ...fieldStyle('phone'),
-                          paddingLeft: 14, fontWeight: 700, fontSize: '1.2rem', letterSpacing: '0.05em'
-                        }}
-                        value={formData.phone || ''} 
-                        onChange={e => {
-                          let v = e.target.value
-                          const pref = formData.country?.prefix || ''
-                          if (!v.startsWith(pref)) v = pref + ' '
-                          setFormData(p => ({ ...p, phone: v }))
-                        }} 
-                      />
-                      <div style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 4, alignItems: 'center' }}>
-                        {formData.phone?.length > 10 && <CheckCircle size={18} color="var(--c-success)" />}
-                      </div>
+                    <div className="label-xs" style={{ marginBottom: 8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--c-text-muted)' }}>
+                      Numéro {formData.operator} Mobile Money
                     </div>
-                    {errors.phone && <p style={{ color: 'var(--c-danger)', fontSize: '0.75rem', marginTop: 4, fontWeight: 600 }}>{errors.phone}</p>}
+                    
+                    <div style={{ 
+                      display: 'flex', borderRadius: 'var(--r-md)', overflow: 'hidden', 
+                      border: `1.5px solid ${errors.phone ? 'var(--c-danger)' : 'var(--c-border)'}`, 
+                      background: 'var(--c-surface)', transition: 'all 0.2s',
+                      boxShadow: 'var(--shadow-sm)'
+                    }}>
+                      {/* Box Préfixe */}
+                      <div style={{ 
+                        padding: '12px 16px', background: 'var(--c-surface-2)', 
+                        borderRight: '1.5px solid var(--c-border)', 
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                        minWidth: 70, fontFamily: 'Manrope', fontWeight: 800, fontSize: '1.1rem', color: 'var(--c-text)' 
+                      }}>
+                        {formData.country?.prefix}
+                      </div>
+                      
+                      {/* Input Numéro */}
+                      <input 
+                        type="tel" 
+                        autoFocus
+                        placeholder="00 00 00 00"
+                        style={{ 
+                          border: 'none', padding: '12px 18px', width: '100%', 
+                          fontFamily: 'Manrope', fontWeight: 700, fontSize: '1.2rem', 
+                          background: 'transparent', color: 'var(--c-text)', outline: 'none',
+                          letterSpacing: '0.05em'
+                        }}
+                        value={formData.phoneRaw || ''}
+                        onChange={e => {
+                          const v = e.target.value.replace(/\D/g, '').slice(0, 12)
+                          setFormData(p => ({ 
+                            ...p, 
+                            phoneRaw: v, 
+                            phone: (formData.country?.prefix || '') + v 
+                          }))
+                        }}
+                      />
+                    </div>
+                    {errors.phone && <p style={{ color: 'var(--c-danger)', fontSize: '0.75rem', marginTop: 6, fontWeight: 600 }}>{errors.phone}</p>}
+                    
+                    {/* Alerte USSD */}
+                    <div style={{ 
+                      marginTop: 20, padding: '14px 18px', background: '#FFF9E6', 
+                      borderRadius: 'var(--r-md)', border: '1px solid #FFEBB3', 
+                      display: 'flex', gap: 14, alignItems: 'center' 
+                    }}>
+                      <div style={{ 
+                        width: 28, height: 28, borderRadius: '50%', background: '#FF9500', 
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 
+                      }}>
+                        <Smartphone size={15} color="white" />
+                      </div>
+                      <p className="body-xs" style={{ color: '#995B00', fontWeight: 600, margin: 0, lineHeight: 1.4, fontSize: '0.8rem' }}>
+                        Vous recevrez une demande de confirmation USSD sur votre téléphone.
+                      </p>
+                    </div>
                   </div>
-
-                  <p className="body-xs" style={{ color: 'var(--c-text-muted)', textAlign: 'center', marginTop: 8 }}>
-                    🔒 Paiement sécurisé via portail {formData.operator} national.
-                  </p>
                 </div>
               )}
 
