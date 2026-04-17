@@ -243,7 +243,7 @@ function PaymentModal({ isOpen, onClose, plan }) {
                 <div>
                   <p className="label-xs" style={{ color: 'var(--c-text-muted)', margin: 0 }}>À payer</p>
                   <p className="title-sm" style={{ margin: 0, color: 'var(--c-primary)' }}>
-                    {plan?.displayPrice}
+                    {currentPricing.label}
                   </p>
                 </div>
                 <span className="badge primary" style={{ background: 'var(--c-primary-soft)', color: 'var(--c-primary)' }}>Plan {plan?.name}</span>
