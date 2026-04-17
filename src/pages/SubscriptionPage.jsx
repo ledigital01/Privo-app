@@ -226,7 +226,6 @@ function PaymentModal({ isOpen, onClose, plan }) {
                     <span style={{ fontSize: '1.4rem' }}>{currentCountry.flag}</span>
                     <div>
                       <div className="action-text" style={{ fontSize: '0.9rem' }}>{currentCountry.name}</div>
-                      <div style={{ fontSize: '0.65rem', color: '#ff6600', fontWeight: 900, textTransform: 'uppercase' }}>Détecté automatiquement</div>
                     </div>
                   </div>
                   <button 
