@@ -23,6 +23,23 @@ function formatExpiry(val) {
   return d.length > 2 ? d.slice(0, 2) + '/' + d.slice(2) : d
 }
 
+const COUNTRIES = [
+  { id: 'ci', name: 'Côte d\'Ivoire', flag: '🇨🇮', prefix: '+225' },
+  { id: 'sn', name: 'Sénégal', flag: '🇸🇳', prefix: '+221' },
+  { id: 'bj', name: 'Bénin', flag: '🇧🇯', prefix: '+229' },
+  { id: 'tg', name: 'Togo', flag: '🇹🇬', prefix: '+228' },
+  { id: 'ml', name: 'Mali', flag: '🇲🇱', prefix: '+223' },
+  { id: 'bf', name: 'Burkina Faso', flag: '🇧🇫', prefix: '+226' },
+  { id: 'cm', name: 'Cameroun', flag: '🇨🇲', prefix: '+237' },
+  { id: 'gn', name: 'Guinée', flag: '🇬🇳', prefix: '+224' },
+  { id: 'ne', name: 'Niger', flag: '🇳🇪', prefix: '+227' },
+  { id: 'cg', name: 'Congo', flag: '🇨🇬', prefix: '+242' },
+  { id: 'rdc', name: 'RD Congo', flag: '🇨🇩', prefix: '+243' },
+  { id: 'gab', name: 'Gabon', flag: '🇬🇦', prefix: '+241' },
+  { id: 'td', name: 'Tchad', flag: '🇹🇩', prefix: '+235' },
+  { id: 'mg', name: 'Madagascar', flag: '🇲🇬', prefix: '+261' },
+]
+
 const OPERATOR_CONFIG = {
   Orange: {
     color: '#FF6600',
@@ -100,6 +117,12 @@ function PaymentModal({ isOpen, onClose, plan }) {
   const [errors, setErrors] = useState({})
   const { updateUserPlan, authUser } = useApp()
 
+  // État pour le pays
+  const [selectedCountryId, setSelectedCountryId] = useState('ci')
+  const [showCountryPicker, setShowCountryPicker] = useState(false)
+  
+  const currentCountry = COUNTRIES.find(c => c.id === selectedCountryId) || COUNTRIES[0]
+
   // État local pour le cycle de facturation (permet de changer dans le modal)
   const [internalBilling, setInternalBilling] = useState(plan?.billingCycle || 'monthly')
   
@@ -109,9 +132,18 @@ function PaymentModal({ isOpen, onClose, plan }) {
   if (!isOpen) return null
 
   const handleClose = () => {
-    setStep('method'); setMethod(null); setFormData({}); setErrors({})
+    setStep('method'); setMethod(null); setFormData({}); setErrors({}); setShowCountryPicker(false)
     onClose()
   }
+
+  // Filtrer les opérateurs pour le pays actuel
+  const availableOperators = Object.entries(OPERATOR_CONFIG)
+    .filter(([_, cfg]) => cfg.countries.some(c => c.id === selectedCountryId))
+    .map(([name, cfg]) => ({ 
+      id: name.toLowerCase().replace(/\s/g, '_'),
+      name,
+      ...cfg 
+    }))
 
   const METHODS = [
     { id: 'mobile_money', label: 'Mobile Money', desc: 'Orange · Wave · MTN · Moov · Airtel…', icon: <Smartphone size={22} />, color: 'warn' },
@@ -182,11 +214,56 @@ function PaymentModal({ isOpen, onClose, plan }) {
               <button className="modal-close-btn" onClick={handleClose}><X size={18} /></button>
             </div>
             <div className="modal-body">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--c-surface-2)', borderRadius: 99, padding: '5px 12px' }}>
-                  <Lock size={13} color="var(--c-text-muted)" />
-                  <span style={{ fontSize: '0.65rem', color: 'var(--c-text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Paiement sécurisé</span>
+              {/* --- SECTION PAYS (Nouveau flux) --- */}
+              <div style={{ marginBottom: 20 }}>
+                <p className="label-xs" style={{ color: 'var(--c-text-muted)', marginBottom: 6 }}>Votre pays</p>
+                <div style={{ 
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  background: 'white', border: '1px solid var(--c-border)', 
+                  padding: '12px 16px', borderRadius: 'var(--r-md)', boxShadow: 'var(--shadow-sm)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: '1.4rem' }}>{currentCountry.flag}</span>
+                    <div>
+                      <div className="action-text" style={{ fontSize: '0.9rem' }}>{currentCountry.name}</div>
+                      <div style={{ fontSize: '0.65rem', color: '#ff6600', fontWeight: 900, textTransform: 'uppercase' }}>Détecté automatiquement</div>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setShowCountryPicker(!showCountryPicker)}
+                    style={{ 
+                      background: 'var(--c-surface-2)', border: 'none', color: 'var(--c-primary)',
+                      padding: '6px 12px', borderRadius: 99, fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer'
+                    }}>
+                    {showCountryPicker ? 'FERMER' : 'MODIFIER'}
+                  </button>
                 </div>
+
+                {/* Sélecteur de pays (Grid) */}
+                {showCountryPicker && (
+                  <div style={{ 
+                    marginTop: 8, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8,
+                    maxHeight: 200, overflowY: 'auto', padding: 8, background: 'var(--c-surface-2)', borderRadius: 'var(--r-md)'
+                  }}>
+                    {COUNTRIES.map(c => (
+                      <button key={c.id} 
+                        onClick={() => { setSelectedCountryId(c.id); setShowCountryPicker(false) }}
+                        style={{ 
+                          display: 'flex', alignItems: 'center', gap: 8, padding: 8, 
+                          background: selectedCountryId === c.id ? 'white' : 'transparent',
+                          border: selectedCountryId === c.id ? '1px solid var(--c-primary)' : '1px solid transparent',
+                          borderRadius: 'var(--r-sm)', cursor: 'pointer', textAlign: 'left'
+                        }}>
+                        <span>{c.flag}</span>
+                        <span style={{ fontSize: '0.75rem' }}>{c.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <p className="label-xs" style={{ color: 'var(--c-text-muted)', margin: 0 }}>Méthode de paiement</p>
                 
                 {/* Sélecteur de période */}
                 <div style={{ 
@@ -209,17 +286,48 @@ function PaymentModal({ isOpen, onClose, plan }) {
                   ))}
                 </div>
               </div>
-              <div className="label-xs" style={{ paddingLeft: 4, marginTop: 12, marginBottom: 4 }}>Choisir un moyen de paiement</div>
-              {METHODS.map(m => (
-                <button key={m.id} className="action-row" onClick={() => { setMethod(m.id); setStep('form') }}>
-                  <div className={`icon-wrap md ${m.color}`}>{m.icon}</div>
-                  <div style={{ flex: 1, textAlign: 'left' }}>
-                    <div className="action-text">{m.label}</div>
-                    <div className="action-desc">{m.desc}</div>
-                  </div>
-                  <ChevronRight size={18} color="var(--c-text-muted)" />
-                </button>
-              ))}
+
+              {/* Grille des méthodes Mobile Money */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+                {availableOperators.map(op => (
+                  <button key={op.id} className="action-row" 
+                    onClick={() => { 
+                      setMethod('mobile_money'); 
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        operator: op.name,
+                        country: currentCountry.name,
+                        prefix: currentCountry.prefix
+                      }));
+                      setStep('form');
+                    }}
+                    style={{ padding: 12, flexDirection: 'column', alignItems: 'flex-start', gap: 8, height: 'auto' }}>
+                    <div className="icon-wrap sm" style={{ background: op.color + '22', color: op.color, width: 32, height: 32 }}>
+                      <Smartphone size={18} />
+                    </div>
+                    <div>
+                      <div className="action-text" style={{ fontSize: '0.8rem' }}>{op.name} Money</div>
+                      <div className="action-desc" style={{ fontSize: '0.6rem' }}>Payer via {op.name}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Méthodes Globales */}
+              <div className="label-xs" style={{ color: 'var(--c-text-muted)', marginBottom: 8 }}>Autres méthodes</div>
+              <button className="action-row" onClick={() => { setMethod('card'); setStep('form') }}>
+                <div className="icon-wrap md primary"><CreditCard size={22} /></div>
+                <div style={{ flex: 1, textAlign: 'left' }}>
+                  <div className="action-text">Carte de crédit</div>
+                  <div className="action-desc">Visa, MasterCard, American Express...</div>
+                </div>
+                <ChevronRight size={18} color="var(--c-text-muted)" />
+              </button>
+
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--c-surface-2)', borderRadius: 99, padding: '5px 12px', marginTop: 16 }}>
+                <Lock size={13} color="var(--c-text-muted)" />
+                <span style={{ fontSize: '0.65rem', color: 'var(--c-text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Paiement sécurisé</span>
+              </div>
             </div>
           </>
         )}
