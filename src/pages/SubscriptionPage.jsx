@@ -124,8 +124,15 @@ function PaymentModal({ isOpen, onClose, plan }) {
   const currentCountry = COUNTRIES.find(c => c.id === selectedCountryId) || COUNTRIES[0]
 
   // État local pour le cycle de facturation (permet de changer dans le modal)
-  const [internalBilling, setInternalBilling] = useState(plan?.billingCycle || 'monthly')
+  const [internalBilling, setInternalBilling] = useState('monthly')
   
+  // Synchroniser avec le choix fait sur la page parente à l'ouverture
+  useEffect(() => {
+    if (isOpen && plan?.billingCycle) {
+      setInternalBilling(plan.billingCycle)
+    }
+  }, [isOpen, plan?.billingCycle])
+
   // Recalculer le prix dynamiquement
   const currentPricing = getPlanPrice(plan?.id, internalBilling)
 
