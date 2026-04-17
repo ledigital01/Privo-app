@@ -408,12 +408,6 @@ function PaymentModal({ isOpen, onClose, plan }) {
                 </div>
               )}
 
-                  <p className="body-xs" style={{ color: 'var(--c-text-muted)', textAlign: 'center', marginTop: 8 }}>
-                    🔒 Paiement sécurisé via portail opérateur national.
-                  </p>
-                </div>
-              )}
-
               {/* CARTE BANCAIRE */}
               {method === 'card' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
