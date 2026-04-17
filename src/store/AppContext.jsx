@@ -137,6 +137,7 @@ export const AppProvider = ({ children }) => {
         filePath: d.file_path,
         description: d.description || '',
         isEmergency: d.is_emergency || false,
+        sizeBytes: d.size_bytes || 0,
         createdAt: d.created_at
       }))
       setDocuments(docs)
@@ -144,18 +145,9 @@ export const AppProvider = ({ children }) => {
   }
 
   const fetchStorageSize = async (userId) => {
-    const uid = userId || authUser?.id
-    if (!uid) return
-    try {
-      const { data, error } = await supabase.storage.from('documents').list(uid)
-      if (!error && data) {
-        // Nettoyer les fichiers qui pourraient être des dossiers ou invalides (metadata.size est 0 pour les dossiers)
-        const total = data.reduce((acc, file) => acc + (file.metadata?.size || 0), 0)
-        setStorageUsedBytes(total)
-      }
-    } catch (err) {
-      console.warn("Erreur fetch storage size:", err)
-    }
+    // Cette fonction n'est plus critique car on calcule en local, 
+    // mais on peut la garder pour resynchroniser avec le cloud si besoin.
+    // Pour l'instant on se fie à l'état local 'documents'.
   }
 
   // ----------------------------------------------------------------
@@ -193,6 +185,7 @@ export const AppProvider = ({ children }) => {
         expires_at: docData.expiresAt || null,
         icon_name: docData.iconName || 'file',
         file_path: filePath,
+        size_bytes: file ? file.size : 0,
         description: docData.description || null
       }
 
@@ -218,6 +211,7 @@ export const AppProvider = ({ children }) => {
         filePath: data[0].file_path,
         description: data[0].description || '',
         isEmergency: data[0].is_emergency || false,
+        sizeBytes: data[0].size_bytes || 0,
         createdAt: data[0].created_at
       }
 
@@ -404,9 +398,9 @@ export const AppProvider = ({ children }) => {
       docsPercent: planLimits.maxDocuments === Infinity ? 0 : Math.round((documents.length / planLimits.maxDocuments) * 100),
       sharesUsed: authUser?.sharesThisMonth || 0,
       sharesMax: planLimits.maxSharesPerMonth,
-      storageUsedMb: storageUsedBytes / (1024 * 1024)
+      storageUsedMb: documents.reduce((acc, d) => acc + (d.sizeBytes || 0), 0) / (1024 * 1024)
     }
-  }, [documents, authUser, planLimits, storageUsedBytes])
+  }, [documents, authUser, planLimits])
 
   const expiringDocs = useMemo(() => {
     const soon = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
