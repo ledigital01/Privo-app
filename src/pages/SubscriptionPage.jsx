@@ -591,14 +591,14 @@ function getPlanPrice(planId, billing) {
   if (!cfg) return { label: 'N/A', sub: '' }
   if (billing === 'yearly') {
     return {
-      label: `${cfg.yearly}$ / an`,
-      sub: `soit ${(cfg.yearly / 12).toFixed(2)}$ / mois`,
+      label: `${cfg.yearly}$ / an (${cfg.yearlyFcfa.toLocaleString()} FCFA / an)`,
+      sub: `soit ${(cfg.yearly / 12).toFixed(2)}$ / mois (${Math.round(cfg.yearlyFcfa / 12).toLocaleString()} FCFA / mois)`,
       badge: cfg.yearlyBadge,
       savings: `Économisez ${cfg.yearlySavings}$`,
     }
   }
   return {
-    label: `${cfg.monthly}$ / mois`,
+    label: `${cfg.monthly}$ / mois (${cfg.monthlyFcfa.toLocaleString()} FCFA / mois)`,
     sub: '',
   }
 }
